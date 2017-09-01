@@ -4,6 +4,7 @@ import com.yzd.common.mq.redis.sharded.ShardedRedisMqUtil;
 import org.apache.commons.lang.StringUtils;
 import redis.clients.jedis.ShardedJedisPool;
 
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -14,18 +15,25 @@ public class RedisJobReaderTask implements Runnable {
     private ShardedJedisPool j;
     private String listKey;
     private SynchronousQueue<String> data;
-    public RedisJobReaderTask(ShardedJedisPool j, String listKey, SynchronousQueue<String> data) {
+    private ArrayBlockingQueue<Integer> TokenBucket;
+    public RedisJobReaderTask(ShardedJedisPool j, String listKey, SynchronousQueue<String> data,ArrayBlockingQueue<Integer> TokenBucket) {
         this.j=j;
         this.listKey=listKey;
         this.data=data;
+        this.TokenBucket=TokenBucket;
     }
 
     @Override
     public void run() {
         while (true){
+            try {
+                //相当于令牌桶-通过令牌来控制有效读取的任务数等于可运行的处理的线程数
+                TokenBucket.put(1);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
             //从redis中读取消息
-            String value = getValue();
-            if (value == null) continue;
+            String value = getValueWhile();
             //System.out.println(value);
             try {
                 //将数据放在同步队列中
@@ -34,6 +42,14 @@ public class RedisJobReaderTask implements Runnable {
                 //log 记录日志
                 e.printStackTrace();
             }
+        }
+    }
+    //循环取值-直到当前值不等null时才可以
+    private String getValueWhile(){
+        while (true){
+            String value = getValue();
+            if (value == null) continue;
+            return value;
         }
     }
 
@@ -47,6 +63,7 @@ public class RedisJobReaderTask implements Runnable {
             //阻塞指令-读取reids的消息队列
             ShardedRedisMqUtil redisUtil = ShardedRedisMqUtil.getInstance();
             value=redisUtil.blpopExt(j, listKey, 5);
+            System.out.println("阻塞指令-读取reids的消息队列"+value);
         }catch (Exception e){
             //log 记录日志
             e.printStackTrace();
