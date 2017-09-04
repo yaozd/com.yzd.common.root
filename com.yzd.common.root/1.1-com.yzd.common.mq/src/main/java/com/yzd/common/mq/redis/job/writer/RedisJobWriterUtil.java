@@ -20,7 +20,7 @@ public class RedisJobWriterUtil {
         if (countOfsadd == 1){
             //常规操作-从尾部插入
             Long result = redisUtil.rpushExt(keyEnum.getListName(), val);
-            System.out.println(result);
+            System.out.println("RedisJobWriterUtil-"+result);
         }
     }
 }

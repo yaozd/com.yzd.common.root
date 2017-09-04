@@ -35,7 +35,7 @@ public class ExpireUpdateThread extends Thread {
             }else {
                 latch.countDown();
             }
-            System.out.println("latch.getCount():"+latch.getCount());
+            System.out.println("ExpireUpdateThread-latch.getCount():"+latch.getCount());
             try {
                 TimeUnit.SECONDS.sleep(timeoutSecond);
             } catch (InterruptedException e) {

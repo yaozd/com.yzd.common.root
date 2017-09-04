@@ -34,7 +34,6 @@ public class RedisJobReaderTask implements Runnable {
             }
             //从redis中读取消息
             String value = getValueWhile();
-            //System.out.println(value);
             try {
                 //将数据放在同步队列中
                 data.put(value);
@@ -63,7 +62,7 @@ public class RedisJobReaderTask implements Runnable {
             //阻塞指令-读取reids的消息队列
             ShardedRedisMqUtil redisUtil = ShardedRedisMqUtil.getInstance();
             value=redisUtil.blpopExt(j, listKey, 5);
-            System.out.println("阻塞指令-读取reids的消息队列"+value);
+            System.out.println("RedisJobReaderTask-阻塞指令-读取reids的消息队列"+value);
         }catch (Exception e){
             //log 记录日志
             e.printStackTrace();

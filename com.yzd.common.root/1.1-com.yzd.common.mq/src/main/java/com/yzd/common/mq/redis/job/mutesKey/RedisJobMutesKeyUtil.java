@@ -18,7 +18,7 @@ public class RedisJobMutesKeyUtil {
         String mutexKey = getMutexKey(keyEnum, val);
         ShardedRedisMqUtil redisUtil = ShardedRedisMqUtil.getInstance();
         //设置任务正在运行-有效时间为5分钟
-        String isOk = redisUtil.set(mutexKey, "1", "NX", "EX", 60 * 5);
+        String isOk = redisUtil.setExt(val, mutexKey, "1", "NX", "EX", 60 * 5);
         if (ObjectUtils.notEqual("OK",isOk)) {
             return false;
         }
@@ -36,11 +36,16 @@ public class RedisJobMutesKeyUtil {
         ShardedRedisMqUtil redisUtil = ShardedRedisMqUtil.getInstance();
         //先删除set排除消息对列再删除mutexKey互斥锁
         redisUtil.sremExt(keyEnum.getSetName(), val);
-        Long delNum= redisUtil.del(mutexKey);
+        Long delNum= redisUtil.delExt(val,mutexKey);
         if(delNum==0){
             return false;
         }
         return true;
+    }
+    public  static Boolean exists(JobEnum keyEnum, String val) {
+        String mutexKey = getMutexKey(keyEnum, val);
+        ShardedRedisMqUtil redisUtil = ShardedRedisMqUtil.getInstance();
+        return redisUtil.existsExt(val,mutexKey);
     }
 
     private static String getMutexKey(JobEnum keyEnum, String val) {

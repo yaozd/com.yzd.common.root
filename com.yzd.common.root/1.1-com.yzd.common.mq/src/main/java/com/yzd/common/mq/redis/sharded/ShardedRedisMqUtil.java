@@ -835,5 +835,44 @@ public class ShardedRedisMqUtil {
             }
         });
     }
+    public String setExt(String shardValue,final String key, final String value, final String nxxx, final String expx, final long time) {
+        return execute(key, new ShardedRedisExecutor<String>() {
+            @Override
+            public String execute(ShardedJedis shardedJedis) {
+                if (StringUtils.isBlank(shardValue)) {
+                    throw new IllegalStateException("[setExt]的value参数不能为空");
+                }
+                String valueKey = shardValue.trim();
+                Jedis j = (Jedis) shardedJedis.getShard(valueKey);
+                return j.set(key, value, nxxx, expx, time);
+            }
+        });
+    }
+    public Long delExt(String shardValue,final String key) {
+        return execute(key, new ShardedRedisExecutor<Long>() {
+            @Override
+            public Long execute(ShardedJedis shardedJedis) {
+                if (StringUtils.isBlank(shardValue)) {
+                    throw new IllegalStateException("[delExt]的value参数不能为空");
+                }
+                String valueKey = shardValue.trim();
+                Jedis j = (Jedis) shardedJedis.getShard(valueKey);
+                return j.del(key);
+            }
+        });
+    }
+    public Boolean existsExt(String shardValue,final String key) {
+        return execute(key, new ShardedRedisExecutor<Boolean>() {
+            @Override
+            public Boolean execute(ShardedJedis shardedJedis) {
+                if (StringUtils.isBlank(shardValue)) {
+                    throw new IllegalStateException("[existsExt]的value参数不能为空");
+                }
+                String valueKey = shardValue.trim();
+                Jedis j = (Jedis) shardedJedis.getShard(valueKey);
+                return j.exists(key);
+            }
+        });
+    }
     /**************************** redis 列表List扩展 end***************************/
 }

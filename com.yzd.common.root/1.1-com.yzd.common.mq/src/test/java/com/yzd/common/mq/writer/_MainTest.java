@@ -19,7 +19,7 @@ public class _MainTest {
     @Test
     public void writerExample(){
 
-        for (int i = 0; i < 20; i++) {
+        for (int i = 0; i < 200; i++) {
             String val="id=" + i;
             RedisJobWriterUtil.write(keyEnum,val);
         }
@@ -38,7 +38,7 @@ public class _MainTest {
     //将任务写入到消息队列中
     void doWorkForWriter(){
         for (int i = 0; i < 100; i++) {
-            String val="2017-07-11=" + i;
+            String val="id=" + i;
             RedisJobWriterUtil.write(keyEnum,val);
         }
     }

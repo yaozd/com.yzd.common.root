@@ -1,6 +1,7 @@
 package com.yzd.common.mq.redis.job.check;
 
 import com.yzd.common.mq.redis.job.enumExt.JobEnum;
+import com.yzd.common.mq.redis.job.mutesKey.RedisJobMutesKeyUtil;
 import com.yzd.common.mq.redis.sharded.ShardedRedisMqUtil;
 import redis.clients.jedis.ShardedJedisPool;
 
@@ -48,13 +49,13 @@ public class RedisJobCheckTask implements Runnable {
                 continue;
             }
             // 验证是否当前消息正在运行
-            boolean isExists = redisUtil.exists(keyEnum.getMutesKeyName() + e);
+            boolean isExists = RedisJobMutesKeyUtil.exists(keyEnum, e);
             if (isExists) {
                 continue;
             }
             // 当前消息中不存在此消息同时当前正在运行消息中也不存在，则进行删除set中的消息
             boolean valOfSrem = redisUtil.sremExt(keyEnum.getSetName(), e);
-            System.out.println(valOfSrem);
+            System.out.println("RedisJobCheckTask-删除set中的消息="+valOfSrem);
         }
     }
 }
