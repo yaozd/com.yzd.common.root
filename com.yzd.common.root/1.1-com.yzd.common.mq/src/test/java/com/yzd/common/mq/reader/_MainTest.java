@@ -75,10 +75,10 @@ public class _MainTest {
         }
     }
     /**
-     *最终版-增加多线程任务处理程序
+     *TODO 最终版-增加多线程任务处理程序
      */
     @Test
-    public void brpopExtByShardedJedisPoolExample2() throws InterruptedException {
+    public void brpopExtByShardedJedisPoolExample_final() throws InterruptedException {
         //相当于令牌桶-通过令牌来控制有效读取的任务数等于可运行的处理的线程数
         //ArrayBlockingQueue<Integer>(2)相当于线程数是2个
         //ArrayBlockingQueue<Integer> TokenBucket=new ArrayBlockingQueue<Integer>(2);

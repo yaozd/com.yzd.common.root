@@ -115,11 +115,11 @@ public class _MainTest {
     }
 
     /**
-     * 最终版-组合版
+     *TODO  最终版-组合版
      */
     //通过对当前的方法增加一个线程锁-确保当前只有一个任务在执行
     @Test
-    public void delSetKeyTaskExample3(){
+    public void delSetKeyTaskExample_final(){
         long timeoutSecond = 10;
         IMyJobExecutorInf myJobExecutorInf=new CheckInvalidJob(keyEnum);
         //对当前执行的任务进行加锁--具体的实现可参考lock下例子

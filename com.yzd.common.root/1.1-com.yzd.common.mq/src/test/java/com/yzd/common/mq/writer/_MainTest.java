@@ -26,10 +26,10 @@ public class _MainTest {
     }
 
     /**
-     *最终版-写入任务
+     *TODO 最终版-写入任务
      */
     @Test
-    public void writerExample2(){
+    public void writerExample_final(){
         long timeoutSecond = 10;
         //对当前执行的任务进行加锁--具体的实现可参考lock下例子
         RedisJobLockUtil.lockTask(keyEnum.getLockWriterName(), timeoutSecond, () -> doWorkForWriter());
