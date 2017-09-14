@@ -26,6 +26,8 @@ public class RedisJobReaderTask implements Runnable {
     @Override
     public void run() {
         while (true){
+            //当读取器获得退出命令后则不在执行读取任务
+            if(RedisJobReader.isShutdown){break;}
             try {
                 //相当于令牌桶-通过令牌来控制有效读取的任务数等于可运行的处理的线程数
                 TokenBucket.put(1);

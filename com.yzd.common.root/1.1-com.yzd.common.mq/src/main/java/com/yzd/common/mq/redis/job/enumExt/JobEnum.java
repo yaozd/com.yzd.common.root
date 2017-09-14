@@ -14,4 +14,6 @@ public interface JobEnum {
     String getSetName();
     //互斥锁-记录正在运行的任务-有效时间为5分钟-任务完成后主动删除MutesKey
     String getMutesKeyName();
+    //阻塞队列的令牌名称
+    String getTokenBucketName();
 }

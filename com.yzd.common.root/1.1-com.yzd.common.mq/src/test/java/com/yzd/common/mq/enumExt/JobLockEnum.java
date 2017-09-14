@@ -33,4 +33,7 @@ public enum  JobLockEnum implements JobEnum {
     public String getMutesKeyName(){
         return "jobMK_"+name+":";
     }
+    public String getTokenBucketName(){
+        return name;
+    }
 }

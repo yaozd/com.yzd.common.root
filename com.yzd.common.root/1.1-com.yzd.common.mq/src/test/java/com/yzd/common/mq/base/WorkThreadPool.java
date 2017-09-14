@@ -15,8 +15,9 @@ public class WorkThreadPool {
     private ArrayBlockingQueue<Integer> TokenBucket;
     //同步阻塞队列线程池
     private ThreadPoolExecutor executor = new ThreadPoolExecutor(0, Integer.MAX_VALUE, 60, TimeUnit.SECONDS, new SynchronousQueue<Runnable>());
-    public WorkThreadPool(int maxThreadSize){
-        this.TokenBucket= new ArrayBlockingQueue<Integer>(maxThreadSize);
+    public WorkThreadPool(String key,int maxThreadSize){
+        //this.TokenBucket= new ArrayBlockingQueue<Integer>(maxThreadSize);
+        this.TokenBucket= TokenBucketBlockingQueue.getInstance().getBlockingQueue(key,maxThreadSize);
     }
 
     public ArrayBlockingQueue<Integer> getTokenBucket() {

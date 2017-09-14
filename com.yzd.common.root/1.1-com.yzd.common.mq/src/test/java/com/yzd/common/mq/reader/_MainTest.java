@@ -82,7 +82,7 @@ public class _MainTest {
         //相当于令牌桶-通过令牌来控制有效读取的任务数等于可运行的处理的线程数
         //ArrayBlockingQueue<Integer>(2)相当于线程数是2个
         //ArrayBlockingQueue<Integer> TokenBucket=new ArrayBlockingQueue<Integer>(2);
-        WorkThreadPool task_readQueue_threadPool=new WorkThreadPool(20);
+        WorkThreadPool task_readQueue_threadPool=new WorkThreadPool(keyEnum.getTokenBucketName(),20);
         ShardedRedisMqUtil redisUtil = ShardedRedisMqUtil.getInstance();
         Collection<JedisShardInfo> jedisCollection = redisUtil.getAllJedisShardInfo();
         ExecutorService executorService = Executors.newFixedThreadPool(jedisCollection.size());
