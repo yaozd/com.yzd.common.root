@@ -10,6 +10,7 @@
     <version>1.0-SNAPSHOT</version>
     <modules>
         <module>1.1-com.yzd.common.mq</module>
+        <module>1.2-com.yzd.common.mq.example</module>
     </modules>
     <parent>
         <groupId>org.springframework.boot</groupId>
