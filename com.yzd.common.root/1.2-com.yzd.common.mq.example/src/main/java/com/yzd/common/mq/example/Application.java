@@ -1,5 +1,6 @@
 package com.yzd.common.mq.example;
 
+import com.yzd.common.mq.example.config.EventListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
@@ -24,7 +25,9 @@ public class Application {
 
     public static void main(String[] args) throws InterruptedException {
         logger.info("项目启动--BEGIN");
-        ApplicationContext ctx = SpringApplication.run(Application.class, args);
+        SpringApplication app = new SpringApplication(Application.class);
+        app.addListeners(new EventListener());
+        ApplicationContext ctx =app.run(args);
         logger.info("项目启动--END");
         CountDownLatch closeLatch = ctx.getBean(CountDownLatch.class);
         closeLatch.await();
