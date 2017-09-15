@@ -1,13 +1,24 @@
 package com.yzd.common.mq.example.schedule.helloWorld;
 
 import com.yzd.common.mq.example.schedule._base.JobListEnum;
+import com.yzd.common.mq.example.schedule._base.WorkThreadPool;
+import com.yzd.common.mq.redis.job.check.CheckInvalidJob;
 import com.yzd.common.mq.redis.job.enumExt.JobEnum;
+import com.yzd.common.mq.redis.job.lock.IMyJobExecutorInf;
 import com.yzd.common.mq.redis.job.lock.RedisJobLockUtil;
+import com.yzd.common.mq.redis.job.reader.RedisJobReaderTask;
+import com.yzd.common.mq.redis.sharded.ShardedRedisMqUtil;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import redis.clients.jedis.JedisShardInfo;
+import redis.clients.jedis.ShardedJedisPool;
 
 import java.text.SimpleDateFormat;
+import java.util.Collection;
 import java.util.Date;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.SynchronousQueue;
 
 /**
  * Created by zd.yao on 2017/9/14.
@@ -15,8 +26,12 @@ import java.util.Date;
 @Component
 public class _HelloWorldJob {
     JobEnum keyEnum= JobListEnum.HelloWorldJob;
+    boolean isCloseWriter=false;
     @Scheduled(initialDelay = 3000, fixedDelay = 1000 * 5)
     public void writeTask() throws InterruptedException {
+        //模拟程序仅执行一次的情况
+        if(isCloseWriter){return;}isCloseWriter=true;
+        //
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-DD HH:mm:ss");
         System.out.println("[writeTask]-Begin-currentTime= " + dateFormat.format(new Date()));
         //region 对当前执行的任务进行加锁--具体的实现可参考lock下例子
@@ -29,11 +44,38 @@ public class _HelloWorldJob {
     @Scheduled(initialDelay = 3000, fixedDelay = 1000 * 5)
     public void readTask() throws InterruptedException {
         SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
-        System.out.println("[readTask]每隔5秒钟执行一次 " + dateFormat.format(new Date()));
+        System.out.println("[readTask]-Begin-currentTime= " + dateFormat.format(new Date()));
+        //region 实现任务读取
+        int maxThreadSize=20;
+        WorkThreadPool task_readQueue_threadPool=new WorkThreadPool(keyEnum.getTokenBucketName(),maxThreadSize);
+        ShardedRedisMqUtil redisUtil = ShardedRedisMqUtil.getInstance();
+        Collection<JedisShardInfo> jedisCollection = redisUtil.getAllJedisShardInfo();
+        ExecutorService executorService = Executors.newFixedThreadPool(jedisCollection.size());
+        SynchronousQueue<String> data = new SynchronousQueue<String>(true);
+        for (JedisShardInfo j : jedisCollection) {
+            ShardedJedisPool shardedJedisPool =redisUtil.getOneShardedJedisPool(j);
+            RedisJobReaderTask jedisExecutor = new RedisJobReaderTask(shardedJedisPool, keyEnum.getListName(),data,task_readQueue_threadPool.getTokenBucket());
+            executorService.execute(jedisExecutor);
+        }
+        int debug=1;
+        while (true){
+            String value=data.take();
+            System.out.println(value);
+            ReadTask task1=new ReadTask(task_readQueue_threadPool.getTokenBucket(),keyEnum,value);
+            task_readQueue_threadPool.getExecutor().execute(task1);
+        }
+        //endregion
     }
     @Scheduled(initialDelay = 3000, fixedDelay = 1000 * 5)
     public void checkTask() throws InterruptedException {
         SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
-        System.out.println("[checkTask]每隔5秒钟执行一次 " + dateFormat.format(new Date()));
+        System.out.println("[checkTask]-Begin-currentTime= " + dateFormat.format(new Date()));
+        //region
+        long timeoutSecond = 10;
+        IMyJobExecutorInf myJobExecutorInf=new CheckInvalidJob(keyEnum);
+        //对当前执行的任务进行加锁--具体的实现可参考lock下例子
+        RedisJobLockUtil.lockTask(keyEnum.getLockCheckName(), timeoutSecond, myJobExecutorInf);
+        //endregion
+        System.out.println("[checkTask]-End-currentTime= " + dateFormat.format(new Date()));
     }
 }

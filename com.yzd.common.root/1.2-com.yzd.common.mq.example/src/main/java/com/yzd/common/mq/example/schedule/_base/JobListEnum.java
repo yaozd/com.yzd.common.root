@@ -7,14 +7,19 @@ import com.yzd.common.mq.redis.job.enumExt.JobEnum;
  * Created by zd.yao on 2017/9/14.
  */
 public enum JobListEnum implements JobEnum {
-    HelloWorldJob("HelloWorld",1);
+    HelloWorldJob(1,"HelloWorld","成员描述信息");
+    //region 内部变量
+    private Integer id;
     // 成员变量
     private String name;
-    private Integer id;
+    // 成员描述信息
+    private String description;
+    //endregion
     // 构造方法
-    private JobListEnum(String name,Integer id) {
-        this.name = name;
+    private JobListEnum(Integer id,String name,String description) {
         this.id=id;
+        this.name = name;
+        this.description=description;
     }
     @Override
     public String getLockWriterName(){

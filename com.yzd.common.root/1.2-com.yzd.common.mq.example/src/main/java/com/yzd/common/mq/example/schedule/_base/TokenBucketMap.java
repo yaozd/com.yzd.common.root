@@ -5,16 +5,17 @@ import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 
 /**
- * Created by zd.yao on 2017/9/14.
+ * 阻塞队列令牌桶的MAP--单例模式
+ * Created by zd.yao on 2017/9/15.
  */
-public class TokenBucketBlockingQueue {
+public class TokenBucketMap {
     private static class SingletonHolder {
-        private static final TokenBucketBlockingQueue INSTANCE = new TokenBucketBlockingQueue();
+        private static final TokenBucketMap INSTANCE = new TokenBucketMap();
     }
-    public static final TokenBucketBlockingQueue getInstance() {
+    public static final TokenBucketMap getInstance() {
         return SingletonHolder.INSTANCE;
     }
-    private TokenBucketBlockingQueue (){
+    private TokenBucketMap (){
         blockingQueueMap=new HashMap<>();
     }
     private Map<String,ArrayBlockingQueue> blockingQueueMap;
@@ -24,7 +25,7 @@ public class TokenBucketBlockingQueue {
         blockingQueueMap.put(key,new ArrayBlockingQueue<Integer>(maxThreadSize));
         return blockingQueueMap.get(key);
     }
-    public int getBlockingQueueMapSize(){
+    public int getMapSize(){
         return blockingQueueMap.size();
     }
     public boolean isNoRunningTask(){
@@ -33,6 +34,6 @@ public class TokenBucketBlockingQueue {
                 return false;
             }
         }
-       return true;
+        return true;
     }
 }

@@ -14,10 +14,10 @@ public class WriteTask implements IMyJobExecutorInf {
     }
     @Override
     public void execute() {
-        doWorkForWriter();
+        doWork();
     }
     //将任务写入到消息队列中
-    void doWorkForWriter() {
+    void doWork() {
         for (int i = 0; i < 100; i++) {
             String val = "id=" + i;
             RedisJobWriterUtil.write(keyEnum, val);

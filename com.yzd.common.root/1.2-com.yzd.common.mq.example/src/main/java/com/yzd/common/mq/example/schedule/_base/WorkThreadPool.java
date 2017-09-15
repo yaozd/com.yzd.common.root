@@ -17,7 +17,7 @@ public class WorkThreadPool {
     private ThreadPoolExecutor executor = new ThreadPoolExecutor(0, Integer.MAX_VALUE, 60, TimeUnit.SECONDS, new SynchronousQueue<Runnable>());
     public WorkThreadPool(String key,int maxThreadSize){
         //this.TokenBucket= new ArrayBlockingQueue<Integer>(maxThreadSize);
-        this.TokenBucket= TokenBucketBlockingQueue.getInstance().getBlockingQueue(key,maxThreadSize);
+        this.TokenBucket= TokenBucketMap.getInstance().getBlockingQueue(key,maxThreadSize);
     }
 
     public ArrayBlockingQueue<Integer> getTokenBucket() {
