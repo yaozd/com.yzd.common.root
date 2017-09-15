@@ -20,7 +20,8 @@ public class RedisJobLockUtil {
             //有些情况下任务是一个循环
             //所以我们可以把锁的粒度定义在单次循环的时间内有锁的有效时间
             //这种情况下锁的有效时间就变为了相对有效时间
-            new ExpireUpdateThread(key, (int) timeoutSecond, timestamp, latch).start();
+            Thread expireUpdateThread= new ExpireUpdateThread(key, (int) timeoutSecond, timestamp, latch);
+            expireUpdateThread.start();
             //当且仅当这个lock不存在的时候，设置完成之后设置过期时间为10。
             //获取锁的机制是对了，但是删除锁的机制直接使用del是不对的。因为有可能导致误删别人的锁的情况。
             //
@@ -38,6 +39,8 @@ public class RedisJobLockUtil {
                     redisUtil.del(key);
                 }
                 latch.countDown();
+                //此处是人为触发线程中断异常-快速关闭ExpireUpdateThread线程
+                expireUpdateThread.interrupt();
             }
 
         }

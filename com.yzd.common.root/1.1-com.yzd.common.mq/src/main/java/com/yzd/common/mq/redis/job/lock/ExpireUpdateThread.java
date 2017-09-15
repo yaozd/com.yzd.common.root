@@ -39,7 +39,9 @@ public class ExpireUpdateThread extends Thread {
             try {
                 TimeUnit.SECONDS.sleep(timeoutSecond);
             } catch (InterruptedException e) {
-                throw new IllegalStateException(e);
+                System.out.println("[ExpireUpdateThread]中断线程");
+                //此处是人为触发，需吃掉线程中断异常-快速关闭ExpireUpdateThread线程
+                //throw new IllegalStateException(e);
             }
         }
     }

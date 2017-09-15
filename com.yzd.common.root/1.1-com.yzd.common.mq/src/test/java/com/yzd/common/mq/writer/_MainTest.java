@@ -6,6 +6,8 @@ import com.yzd.common.mq.redis.job.lock.RedisJobLockUtil;
 import com.yzd.common.mq.redis.job.writer.RedisJobWriterUtil;
 import org.junit.Test;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * Created by zd.yao on 2017/8/29.
  */
@@ -37,6 +39,12 @@ public class _MainTest {
     }
     //将任务写入到消息队列中
     void doWorkForWriter(){
+        //模拟业务执行时间
+        try {
+            TimeUnit.SECONDS.sleep(50);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         for (int i = 0; i < 100; i++) {
             String val="id=" + i;
             RedisJobWriterUtil.write(keyEnum,val);

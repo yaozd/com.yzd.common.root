@@ -26,11 +26,12 @@ import java.util.concurrent.SynchronousQueue;
 @Component
 public class _HelloWorldJob {
     JobEnum keyEnum= JobListEnum.HelloWorldJob;
+    //模拟程序仅执行一次的情况-真正开发时不需要isCloseWriter
     boolean isCloseWriter=false;
     @Scheduled(initialDelay = 3000, fixedDelay = 1000 * 5)
     public void writeTask() throws InterruptedException {
         //模拟程序仅执行一次的情况
-        if(isCloseWriter){return;}isCloseWriter=true;
+        //if(isCloseWriter){return;}isCloseWriter=true;
         //
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-DD HH:mm:ss");
         System.out.println("[writeTask]-Begin-currentTime= " + dateFormat.format(new Date()));

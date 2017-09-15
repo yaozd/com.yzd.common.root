@@ -20,6 +20,7 @@ public class EventListener  implements ApplicationListener {
         //应用关闭-kill PID 不要使用kill -9 PID
         if (applicationEvent instanceof ContextClosedEvent) {
             System.out.println("应用关闭-kill PID 不要使用kill -9 PID");
+            System.out.println("TokenBucketMap.getInstance().getMapSize()="+ TokenBucketMap.getInstance().getMapSize());
             //关闭消息队列的读取任务
             RedisJobReader.shutdown();
             //
@@ -44,6 +45,7 @@ public class EventListener  implements ApplicationListener {
                 executor.awaitTermination(10, TimeUnit.SECONDS);
             } catch (InterruptedException e) {e.printStackTrace();}
             //endregion
+            System.out.println("应用关闭-可以优雅退出");
             return;
         }
     }

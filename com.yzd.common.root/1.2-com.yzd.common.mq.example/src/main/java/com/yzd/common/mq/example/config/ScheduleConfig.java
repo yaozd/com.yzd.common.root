@@ -23,6 +23,7 @@ public class ScheduleConfig implements SchedulingConfigurer {
 
     @Bean(destroyMethod="shutdown")
     public Executor taskExecutor() {
-        return Executors.newScheduledThreadPool(100);
+        //可以根据调度任务的个数来设置线程池的大小
+        return Executors.newScheduledThreadPool(30);
     }
 }
