@@ -28,16 +28,18 @@ public class _HelloWorldJob {
     JobEnum keyEnum= JobListEnum.HelloWorldJob;
     //模拟程序仅执行一次的情况-真正开发时不需要isCloseWriter
     boolean isCloseWriter=false;
-    @Scheduled(initialDelay = 3000, fixedDelay = 1000 * 5)
+    //int myJobExecutorAfterSleepSecond=5; 单实例并且每5秒执行一次
+    @Scheduled(initialDelay = 3000, fixedDelay = 1000 * 2)
     public void writeTask() throws InterruptedException {
         //模拟程序仅执行一次的情况
         //if(isCloseWriter){return;}isCloseWriter=true;
         //
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-DD HH:mm:ss");
         System.out.println("[writeTask]-Begin-currentTime= " + dateFormat.format(new Date()));
+        int myJobExecutorAfterSleepSecond=5;
         //region 对当前执行的任务进行加锁--具体的实现可参考lock下例子
         long timeoutSecond = 10;
-        RedisJobLockUtil.lockTask(keyEnum.getLockWriterName(), timeoutSecond,new WriteTask(keyEnum));
+        RedisJobLockUtil.lockTask(keyEnum.getLockWriterName(), timeoutSecond,new WriteTask(keyEnum),myJobExecutorAfterSleepSecond);
         //endregion
         System.out.println("[writeTask]-End-currentTime= " + dateFormat.format(new Date()));
 
@@ -67,15 +69,17 @@ public class _HelloWorldJob {
         }
         //endregion
     }
-    @Scheduled(initialDelay = 3000, fixedDelay = 1000 * 5)
+    //int myJobExecutorAfterSleepSecond=5; 单实例并且每5秒执行一次
+    @Scheduled(initialDelay = 3000, fixedDelay = 1000 * 2)
     public void checkTask() throws InterruptedException {
         SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
         System.out.println("[checkTask]-Begin-currentTime= " + dateFormat.format(new Date()));
         //region
         long timeoutSecond = 10;
         IMyJobExecutorInf myJobExecutorInf=new CheckInvalidJob(keyEnum);
+        int myJobExecutorAfterSleepSecond=5;
         //对当前执行的任务进行加锁--具体的实现可参考lock下例子
-        RedisJobLockUtil.lockTask(keyEnum.getLockCheckName(), timeoutSecond, myJobExecutorInf);
+        RedisJobLockUtil.lockTask(keyEnum.getLockCheckName(), timeoutSecond, myJobExecutorInf,myJobExecutorAfterSleepSecond);
         //endregion
         System.out.println("[checkTask]-End-currentTime= " + dateFormat.format(new Date()));
     }

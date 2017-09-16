@@ -4,13 +4,17 @@ import com.yzd.common.mq.redis.sharded.ShardedRedisMqUtil;
 import org.apache.commons.lang.ObjectUtils;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by zd.yao on 2017/8/28.
  */
 public class RedisJobLockUtil {
     //对当前执行的任务进行加锁
-    public static void lockTask(String key, long timeoutSecond, IMyJobExecutorInf myJobExecutorInf) {
+    public static void lockTask(String key, long timeoutSecond, IMyJobExecutorInf myJobExecutorInf){
+        lockTask(key,timeoutSecond,myJobExecutorInf,0);
+    }
+    public static void lockTask(String key, long timeoutSecond, IMyJobExecutorInf myJobExecutorInf,int myJobExecutorAfterSleepSecond) {
         ShardedRedisMqUtil redisUtil = ShardedRedisMqUtil.getInstance();
         String timestamp = String.valueOf(System.currentTimeMillis());
         CountDownLatch latch = new CountDownLatch(1);
@@ -30,6 +34,8 @@ public class RedisJobLockUtil {
                 //模拟业务执行时间
                 //TimeUnit.SECONDS.sleep(50);
                 myJobExecutorInf.execute();
+                //主要是保证单实例程序在某一时间段内执行的次数
+                myJobExecutorAfterSleepFun(myJobExecutorAfterSleepSecond);
             } catch (Exception e) {
                 e.printStackTrace();
             }finally {
@@ -43,6 +49,16 @@ public class RedisJobLockUtil {
                 expireUpdateThread.interrupt();
             }
 
+        }
+    }
+    //主要是保证单实例程序在某一时间段内执行的次数
+    private static void myJobExecutorAfterSleepFun(int myJobExecutorAfterSleepSecond) {
+        if(myJobExecutorAfterSleepSecond<1)return;
+        try {
+            TimeUnit.SECONDS.sleep(myJobExecutorAfterSleepSecond);
+        } catch (InterruptedException e) {
+            //此处人为故意吃掉异常
+            //e.printStackTrace();
         }
     }
 }
