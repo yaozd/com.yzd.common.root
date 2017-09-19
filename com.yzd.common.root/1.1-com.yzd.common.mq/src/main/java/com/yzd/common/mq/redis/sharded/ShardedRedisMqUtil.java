@@ -8,27 +8,20 @@ import redis.clients.jedis.*;
 import redis.clients.util.Hashing;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Created by Administrator on 2017/3/6.
  */
 public class ShardedRedisMqUtil {
     private static final Logger LOGGER = LoggerFactory.getLogger(ShardedRedisMqUtil.class);
-
-    private static final String DEFAULT_REDIS_SEPARATOR = ";";
-
-    private static final String HOST_PORT_SEPARATOR = ":";
-    private static final String WEIGHT_SEPARATOR = "\\*";
-    private ShardedJedisPool shardedJedisPool = null;
-    private List<JedisShardInfo> jedisShardInfoList=null;
-
-    private static final ShardedRedisMqUtil INSTANCE = new ShardedRedisMqUtil();
-
-    private ShardedRedisMqUtil() {
-        initialShardedPool();
+    private static class SingletonHolder {
+        private static final ShardedRedisMqUtil INSTANCE = new ShardedRedisMqUtil();
     }
-
-    private void initialShardedPool() {
+    public static final ShardedRedisMqUtil getInstance() {
+        return SingletonHolder.INSTANCE;
+    }
+    private ShardedRedisMqUtil (){
         // 操作超时时间,默认2秒
         int timeout = NumberUtils.toInt(SharedRedisConfig.getConfigProperty("redis.timeout"), 2000);
         // jedis池最大连接数总数，默认8
@@ -58,27 +51,30 @@ public class ShardedRedisMqUtil {
         LOGGER.info("the urls of redis is {}", redisUrls);
         // 生成连接池
         List<JedisShardInfo> shardedPoolList = new ArrayList<JedisShardInfo>();
-        for (String redisUrl : redisUrls.split(DEFAULT_REDIS_SEPARATOR)) {
+        String[] redisUrlList=redisUrls.split(DEFAULT_REDIS_SEPARATOR);
+        for (String redisUrl : redisUrlList) {
             JedisShardInfo Jedisinfo = new JedisShardInfo(redisUrl);
             Jedisinfo.setConnectionTimeout(timeout);
             Jedisinfo.setSoTimeout(timeout);
             shardedPoolList.add(Jedisinfo);
         }
-        //
-        jedisShardInfoList=shardedPoolList;
-
-        // 构造池
         this.shardedJedisPool = new ShardedJedisPool(poolConfig, shardedPoolList, Hashing.MURMUR_HASH);
+        //
+        shardedJedisPoolMap=new ConcurrentHashMap<String, ShardedJedisPool>();
+        for (String redisUrl:redisUrlList){
+            JedisShardInfo Jedisinfo = new JedisShardInfo(redisUrl);
+            Jedisinfo.setConnectionTimeout(timeout);
+            Jedisinfo.setSoTimeout(timeout);
+            shardedJedisPoolMap.put(redisUrl,new ShardedJedisPool(poolConfig, Arrays.asList(Jedisinfo), Hashing.MURMUR_HASH));
+        }
+        //
     }
-
-    public static ShardedRedisMqUtil getInstance() {
-        return INSTANCE;
+    private String DEFAULT_REDIS_SEPARATOR = ";";
+    private ShardedJedisPool shardedJedisPool = null;
+    private  Map<String,ShardedJedisPool> shardedJedisPoolMap=null;
+    public List<String> getAllRedisUrls(){
+        return new ArrayList<String>(shardedJedisPoolMap.keySet());
     }
-    //获得所有的redis数据库信息
-    public List<JedisShardInfo> getAllJedisShardInfo(){
-        return jedisShardInfoList;
-    }
-
     /**
      * 实现jedis连接的获取和释放，具体的redis业务逻辑由executor实现
      *
@@ -103,14 +99,13 @@ public class ShardedRedisMqUtil {
      *  这里会以List中的value的值做为分片的信息
      *  这样就可以实现水平扩展
      *  主要解决redis作为消息队列时出现数据倾斜的问题
-     * @param jedisPool
      * @param key
      * @param executor
      * @param <T>
      * @return
      */
-    public <T> T execute(ShardedJedisPool jedisPool,String key, ShardedJedisPoolExecutor<T> executor) {
-        ShardedJedis jedis = jedisPool.getResource();
+    public <T> T execute(String redisUrl,String key, ShardedJedisPoolExecutor<T> executor) {
+        ShardedJedis jedis =shardedJedisPoolMap.get(redisUrl).getResource();
         T result = null;
         try {
             result = executor.execute(jedis);
@@ -723,13 +718,12 @@ public class ShardedRedisMqUtil {
     }
     /**
      * 移出并获取列表的【最后一个元素】
-     * @param j
      * @param key
      * @param timeout 超时时间单位是秒
      * @return
      */
-    public String brpopExt(ShardedJedisPool j, String key,int timeout){
-        return execute(j, key, new ShardedJedisPoolExecutor<String>() {
+    public String brpopExt(String redisUrl, String key,int timeout){
+        return execute(redisUrl,key, new ShardedJedisPoolExecutor<String>() {
             @Override
             public String execute(ShardedJedis jedis) {
                 List<String> value = jedis.brpop(timeout, key);
@@ -740,13 +734,12 @@ public class ShardedRedisMqUtil {
     }
     /**
      * 移出并获取列表的【最前面的第一个元素】
-     * @param j
      * @param key
      * @param timeout 超时时间单位是秒
      * @return
      */
-    public String blpopExt(ShardedJedisPool j, String key,int timeout){
-        return execute(j, key, new ShardedJedisPoolExecutor<String>() {
+    public String blpopExt(String redisUrl, String key,int timeout){
+        return execute(redisUrl, key, new ShardedJedisPoolExecutor<String>() {
             @Override
             public String execute(ShardedJedis jedis) {
                 List<String> value = jedis.blpop(timeout, key);
@@ -754,23 +747,6 @@ public class ShardedRedisMqUtil {
                 return value.get(1);
             }
         });
-    }
-    /**
-     * 通过JedisShardInfo分片信息生成一个连接数为1的ShardedJedisPool线程池
-     * 主要用redis的消息队列做分片时的数据读取中
-     * @param j
-     * @return
-     */
-    public ShardedJedisPool getOneShardedJedisPool(JedisShardInfo j){
-        // 设置jedis连接池配置
-        JedisPoolConfig poolConfig = new JedisPoolConfig();
-        poolConfig.setMaxTotal(1);
-        poolConfig.setMaxIdle(1);
-        poolConfig.setMinIdle(1);
-        poolConfig.setMaxWaitMillis(60000);
-        poolConfig.setTestOnBorrow(true);
-        ShardedJedisPool shardedJedisPool = new ShardedJedisPool(poolConfig, Arrays.asList(j), Hashing.MURMUR_HASH);
-        return shardedJedisPool;
     }
     public Long saddExt(final String key, final String value) {
         return execute(key, new ShardedRedisExecutor<Long>() {
@@ -803,8 +779,8 @@ public class ShardedRedisMqUtil {
             }
         });
     }
-    public Long scardExt(ShardedJedisPool j, String key){
-        return execute(j, key, new ShardedJedisPoolExecutor<Long>() {
+    public Long scardExt(String redisUrl, String key){
+        return execute(redisUrl, key, new ShardedJedisPoolExecutor<Long>() {
             @Override
             public Long execute(ShardedJedis jedis) {
                 Long value = jedis.scard(key);
@@ -812,8 +788,8 @@ public class ShardedRedisMqUtil {
             }
         });
     }
-    public List<String> srandMemberExt(ShardedJedisPool j, String key,int count){
-        return execute(j, key, new ShardedJedisPoolExecutor<List<String>>() {
+    public List<String> srandMemberExt(String redisUrl, String key,int count){
+        return execute(redisUrl, key, new ShardedJedisPoolExecutor<List<String>>() {
             @Override
             public List<String> execute(ShardedJedis jedis) {
                 List<String> values = jedis.srandmember(key, count);

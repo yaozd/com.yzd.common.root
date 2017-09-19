@@ -10,12 +10,10 @@ import com.yzd.common.mq.redis.job.reader.RedisJobReaderTask;
 import com.yzd.common.mq.redis.sharded.ShardedRedisMqUtil;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import redis.clients.jedis.JedisShardInfo;
-import redis.clients.jedis.ShardedJedisPool;
 
 import java.text.SimpleDateFormat;
-import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.SynchronousQueue;
@@ -29,14 +27,14 @@ public class _HelloWorldJob {
     //模拟程序仅执行一次的情况-真正开发时不需要isCloseWriter
     boolean isCloseWriter=false;
     //int myJobExecutorAfterSleepSecond=5; 单实例并且每5秒执行一次
-    @Scheduled(initialDelay = 3000, fixedDelay = 1000 * 2)
+    @Scheduled(initialDelay = 3000, fixedDelay = 100)
     public void writeTask() throws InterruptedException {
         //模拟程序仅执行一次的情况
         //if(isCloseWriter){return;}isCloseWriter=true;
         //
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-DD HH:mm:ss");
         System.out.println("[writeTask]-Begin-currentTime= " + dateFormat.format(new Date()));
-        int myJobExecutorAfterSleepSecond=5;
+        int myJobExecutorAfterSleepSecond=0;
         //region 对当前执行的任务进行加锁--具体的实现可参考lock下例子
         long timeoutSecond = 10;
         RedisJobLockUtil.lockTask(keyEnum.getLockWriterName(), timeoutSecond,new WriteTask(keyEnum),myJobExecutorAfterSleepSecond);
@@ -52,12 +50,11 @@ public class _HelloWorldJob {
         int maxThreadSize=20;
         WorkThreadPool task_readQueue_threadPool=new WorkThreadPool(keyEnum.getTokenBucketName(),maxThreadSize);
         ShardedRedisMqUtil redisUtil = ShardedRedisMqUtil.getInstance();
-        Collection<JedisShardInfo> jedisCollection = redisUtil.getAllJedisShardInfo();
-        ExecutorService executorService = Executors.newFixedThreadPool(jedisCollection.size());
+        List<String> redisUrlList = redisUtil.getAllRedisUrls();
+        ExecutorService executorService = Executors.newFixedThreadPool(redisUrlList.size());
         SynchronousQueue<String> data = new SynchronousQueue<String>(true);
-        for (JedisShardInfo j : jedisCollection) {
-            ShardedJedisPool shardedJedisPool =redisUtil.getOneShardedJedisPool(j);
-            RedisJobReaderTask jedisExecutor = new RedisJobReaderTask(shardedJedisPool, keyEnum.getListName(),data,task_readQueue_threadPool.getTokenBucket());
+        for (String redisUrl : redisUrlList) {
+            RedisJobReaderTask jedisExecutor = new RedisJobReaderTask(redisUrl, keyEnum.getListName(),data,task_readQueue_threadPool.getTokenBucket());
             executorService.execute(jedisExecutor);
         }
         int debug=1;
@@ -70,14 +67,14 @@ public class _HelloWorldJob {
         //endregion
     }
     //int myJobExecutorAfterSleepSecond=5; 单实例并且每5秒执行一次
-    @Scheduled(initialDelay = 3000, fixedDelay = 1000 * 2)
+    @Scheduled(initialDelay = 3000, fixedDelay = 100)
     public void checkTask() throws InterruptedException {
         SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
         System.out.println("[checkTask]-Begin-currentTime= " + dateFormat.format(new Date()));
         //region
         long timeoutSecond = 10;
         IMyJobExecutorInf myJobExecutorInf=new CheckInvalidJob(keyEnum);
-        int myJobExecutorAfterSleepSecond=5;
+        int myJobExecutorAfterSleepSecond=0;
         //对当前执行的任务进行加锁--具体的实现可参考lock下例子
         RedisJobLockUtil.lockTask(keyEnum.getLockCheckName(), timeoutSecond, myJobExecutorInf,myJobExecutorAfterSleepSecond);
         //endregion

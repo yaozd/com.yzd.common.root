@@ -2,7 +2,6 @@ package com.yzd.common.mq.redis.job.reader;
 
 import com.yzd.common.mq.redis.sharded.ShardedRedisMqUtil;
 import org.apache.commons.lang.StringUtils;
-import redis.clients.jedis.ShardedJedisPool;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.SynchronousQueue;
@@ -12,12 +11,12 @@ import java.util.concurrent.TimeUnit;
  * Created by zd.yao on 2017/8/28.
  */
 public class RedisJobReaderTask implements Runnable {
-    private ShardedJedisPool j;
+    private String redisUrl;
     private String listKey;
     private SynchronousQueue<String> data;
     private ArrayBlockingQueue<Integer> TokenBucket;
-    public RedisJobReaderTask(ShardedJedisPool j, String listKey, SynchronousQueue<String> data,ArrayBlockingQueue<Integer> TokenBucket) {
-        this.j=j;
+    public RedisJobReaderTask(String redisUrl, String listKey, SynchronousQueue<String> data,ArrayBlockingQueue<Integer> TokenBucket) {
+        this.redisUrl=redisUrl;
         this.listKey=listKey;
         this.data=data;
         this.TokenBucket=TokenBucket;
@@ -63,7 +62,7 @@ public class RedisJobReaderTask implements Runnable {
         try{
             //阻塞指令-读取reids的消息队列
             ShardedRedisMqUtil redisUtil = ShardedRedisMqUtil.getInstance();
-            value=redisUtil.blpopExt(j, listKey, 5);
+            value=redisUtil.blpopExt(redisUrl, listKey, 5);
             System.out.println("RedisJobReaderTask-阻塞指令-读取reids的消息队列"+value);
         }catch (Exception e){
             //log 记录日志

@@ -3,10 +3,8 @@ package com.yzd.common.mq.redis.job.check;
 import com.yzd.common.mq.redis.job.enumExt.JobEnum;
 import com.yzd.common.mq.redis.job.lock.IMyJobExecutorInf;
 import com.yzd.common.mq.redis.sharded.ShardedRedisMqUtil;
-import redis.clients.jedis.JedisShardInfo;
-import redis.clients.jedis.ShardedJedisPool;
 
-import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -34,12 +32,11 @@ public class CheckInvalidJob implements IMyJobExecutorInf {
 
     void doWork() throws InterruptedException {
         ShardedRedisMqUtil redisUtil = ShardedRedisMqUtil.getInstance();
-        Collection<JedisShardInfo> jedisCollection = redisUtil.getAllJedisShardInfo();
-        ExecutorService executorService = Executors.newFixedThreadPool(jedisCollection.size());
-        CountDownLatch latch = new CountDownLatch(jedisCollection.size());
-        for (JedisShardInfo j : jedisCollection) {
-            ShardedJedisPool shardedJedisPool = redisUtil.getOneShardedJedisPool(j);
-            RedisJobCheckTask jedisExecutor = new RedisJobCheckTask(shardedJedisPool, keyEnum, latch);
+        List<String> redisUrlList = redisUtil.getAllRedisUrls();
+        ExecutorService executorService = Executors.newFixedThreadPool(redisUrlList.size());
+        CountDownLatch latch = new CountDownLatch(redisUrlList.size());
+        for (String redisUrl : redisUrlList) {
+            RedisJobCheckTask jedisExecutor = new RedisJobCheckTask(redisUrl, keyEnum, latch);
             executorService.execute(jedisExecutor);
         }
         latch.await();

@@ -1,8 +1,8 @@
 package com.yzd.common.mq.example.schedule._base;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 阻塞队列令牌桶的MAP--单例模式
@@ -16,7 +16,7 @@ public class TokenBucketMap {
         return SingletonHolder.INSTANCE;
     }
     private TokenBucketMap (){
-        blockingQueueMap=new HashMap<>();
+        blockingQueueMap=new ConcurrentHashMap<>();
     }
     private Map<String,ArrayBlockingQueue> blockingQueueMap;
     public ArrayBlockingQueue getBlockingQueue(String key,int maxThreadSize){

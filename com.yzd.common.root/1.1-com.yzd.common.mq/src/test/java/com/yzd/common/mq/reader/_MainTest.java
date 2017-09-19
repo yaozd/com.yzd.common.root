@@ -7,10 +7,8 @@ import com.yzd.common.mq.redis.job.mutesKey.RedisJobMutesKeyUtil;
 import com.yzd.common.mq.redis.job.reader.RedisJobReaderTask;
 import com.yzd.common.mq.redis.sharded.ShardedRedisMqUtil;
 import org.junit.Test;
-import redis.clients.jedis.JedisShardInfo;
-import redis.clients.jedis.ShardedJedisPool;
 
-import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -46,15 +44,14 @@ public class _MainTest {
     @Test
     public void brpopExtByShardedJedisPoolExample() throws InterruptedException {
         ShardedRedisMqUtil redisUtil = ShardedRedisMqUtil.getInstance();
-        Collection<JedisShardInfo> jedisCollection = redisUtil.getAllJedisShardInfo();
-        ExecutorService executorService = Executors.newFixedThreadPool(jedisCollection.size());
+        List<String> redisUrlList = redisUtil.getAllRedisUrls();
+        ExecutorService executorService = Executors.newFixedThreadPool(redisUrlList.size());
         SynchronousQueue<String> data = new SynchronousQueue<String>();
         //相当于令牌桶-通过令牌来控制有效读取的任务数等于可运行的处理的线程数
         //ArrayBlockingQueue<Integer>(2)相当于线程数是2个
         ArrayBlockingQueue<Integer> TokenBucket=new ArrayBlockingQueue<Integer>(2);
-        for (JedisShardInfo j : jedisCollection) {
-            ShardedJedisPool shardedJedisPool =redisUtil.getOneShardedJedisPool(j);
-            RedisJobReaderTask jedisExecutor = new RedisJobReaderTask(shardedJedisPool, keyEnum.getListName(),data,TokenBucket);
+        for (String  redisUrl : redisUrlList) {
+            RedisJobReaderTask jedisExecutor = new RedisJobReaderTask(redisUrl, keyEnum.getListName(),data,TokenBucket);
             executorService.execute(jedisExecutor);
         }
         while (true){
@@ -84,12 +81,11 @@ public class _MainTest {
         //ArrayBlockingQueue<Integer> TokenBucket=new ArrayBlockingQueue<Integer>(2);
         WorkThreadPool task_readQueue_threadPool=new WorkThreadPool(keyEnum.getTokenBucketName(),20);
         ShardedRedisMqUtil redisUtil = ShardedRedisMqUtil.getInstance();
-        Collection<JedisShardInfo> jedisCollection = redisUtil.getAllJedisShardInfo();
-        ExecutorService executorService = Executors.newFixedThreadPool(jedisCollection.size());
+        List<String> redisUrlList = redisUtil.getAllRedisUrls();
+        ExecutorService executorService = Executors.newFixedThreadPool(redisUrlList.size());
         SynchronousQueue<String> data = new SynchronousQueue<String>(true);
-        for (JedisShardInfo j : jedisCollection) {
-            ShardedJedisPool shardedJedisPool =redisUtil.getOneShardedJedisPool(j);
-            RedisJobReaderTask jedisExecutor = new RedisJobReaderTask(shardedJedisPool, keyEnum.getListName(),data,task_readQueue_threadPool.getTokenBucket());
+        for (String redisUrl : redisUrlList) {
+            RedisJobReaderTask jedisExecutor = new RedisJobReaderTask(redisUrl, keyEnum.getListName(),data,task_readQueue_threadPool.getTokenBucket());
             executorService.execute(jedisExecutor);
         }
         int debug=1;

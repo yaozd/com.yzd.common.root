@@ -1,3 +1,4 @@
+/*
 package com.yzd.common.mq.check;
 
 import com.yzd.common.mq.enumExt.JobLockEnum;
@@ -18,15 +19,19 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+*/
 /**
  * Created by zd.yao on 2017/8/30.
- */
+ *//*
+
 public class _MainTest {
     JobEnum keyEnum= JobLockEnum.HelloWorldJob;
 
-    /**
+    */
+/**
      * 初始思路
-     */
+     *//*
+
     @Test
     public void delSetKeyTaskExample(){
         ShardedRedisMqUtil redisUtil = ShardedRedisMqUtil.getInstance();
@@ -57,9 +62,11 @@ public class _MainTest {
         }
     }
 
-    /**
+    */
+/**
      * 对应==RedisJobCheckTask类代码
-     */
+     *//*
+
     @Test
     public void delSetKeyTaskExample1(){
         ShardedRedisMqUtil redisUtil = ShardedRedisMqUtil.getInstance();
@@ -93,11 +100,13 @@ public class _MainTest {
         }
     }
 
-    /**
+    */
+/**
      * 对应==CheckInvalidJob类代码
      * 等待所有线程执行完毕
      * @throws InterruptedException
-     */
+     *//*
+
     @Test
     public void delSetKeyTaskExample2() throws InterruptedException {
         ShardedRedisMqUtil redisUtil = ShardedRedisMqUtil.getInstance();
@@ -114,9 +123,11 @@ public class _MainTest {
         executorService.awaitTermination(3, TimeUnit.SECONDS);
     }
 
-    /**
+    */
+/**
      *TODO  最终版-组合版
-     */
+     *//*
+
     //通过对当前的方法增加一个线程锁-确保当前只有一个任务在执行
     @Test
     public void delSetKeyTaskExample_final(){
@@ -128,3 +139,4 @@ public class _MainTest {
     }
 }
 
+*/

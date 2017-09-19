@@ -3,7 +3,6 @@ package com.yzd.common.mq.redis.job.check;
 import com.yzd.common.mq.redis.job.enumExt.JobEnum;
 import com.yzd.common.mq.redis.job.mutesKey.RedisJobMutesKeyUtil;
 import com.yzd.common.mq.redis.sharded.ShardedRedisMqUtil;
-import redis.clients.jedis.ShardedJedisPool;
 
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -12,11 +11,11 @@ import java.util.concurrent.CountDownLatch;
  * Created by zd.yao on 2017/8/30.
  */
 public class RedisJobCheckTask implements Runnable {
-    private ShardedJedisPool j;
+    private String redisUrl;
     private JobEnum keyEnum;
     private CountDownLatch latch;
-    public RedisJobCheckTask(ShardedJedisPool j, JobEnum keyEnum,CountDownLatch latch) {
-        this.j=j;
+    public RedisJobCheckTask(String redisUrl, JobEnum keyEnum,CountDownLatch latch) {
+        this.redisUrl=redisUrl;
         this.keyEnum=keyEnum;
         this.latch=latch;
     }
@@ -32,12 +31,12 @@ public class RedisJobCheckTask implements Runnable {
 
     private void doWork() {
         ShardedRedisMqUtil redisUtil = ShardedRedisMqUtil.getInstance();
-        long total = redisUtil.scardExt(j, keyEnum.getSetName());
+        long total = redisUtil.scardExt(redisUrl, keyEnum.getSetName());
         // 每5分钟获取当前消息的10%最多大值为200，进行消息删除重复消息；
         //200>countOfSrandMember>20
         int countOfSrandMember = (int) ((total + 10) * 0.1) + 20;
         countOfSrandMember = countOfSrandMember > 200 ? 200 : countOfSrandMember;
-        List<String> setList = redisUtil.srandMemberExt(j,keyEnum.getSetName(), countOfSrandMember);
+        List<String> setList = redisUtil.srandMemberExt(redisUrl,keyEnum.getSetName(), countOfSrandMember);
         //
         for (String e : setList) {
             // 判断当前消息队列中是否存在此消息
