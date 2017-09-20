@@ -43,8 +43,13 @@ public class RedisJobCheckTask implements Runnable {
             // 当count为负数时，移除方向是从尾到头-删除
             long valOfLrem = redisUtil.lremExt(keyEnum.getListName(), -1, e);
             if (valOfLrem == 1) {
+                //region 必须确定这个值依然存在set集合中，才知道没有被其他线程消费，才可以在添加到list集合中
+                long countOfsadd = redisUtil.saddExt(keyEnum.getSetName(), e);
+                //countOfsadd>0，说明已经不存在set集合中，已经被其他线程消费掉了。
+                if(countOfsadd>0)continue;
                 // 常规操作-从头部插入
                 redisUtil.lpushExt(keyEnum.getListName(), e);
+                //endregion
                 continue;
             }
             // 验证是否当前消息正在运行
@@ -52,9 +57,12 @@ public class RedisJobCheckTask implements Runnable {
             if (isExists) {
                 continue;
             }
-            // 当前消息中不存在此消息同时当前正在运行消息中也不存在，则进行删除set中的消息
+            //region 当前消息中不存在此消息同时当前正在运行消息中也不存在，则进行删除set中的消息
+            //先删除list集合中的值，再删除set集合中的值，确保值一定被删除
+            redisUtil.lremExt(keyEnum.getListName(), -1, e);
             boolean valOfSrem = redisUtil.sremExt(keyEnum.getSetName(), e);
-            System.out.println("RedisJobCheckTask-删除set中的消息="+valOfSrem);
+            //endregion
+            System.out.println("【RedisJobCheckTask】-删除set中的消息="+valOfSrem);
         }
     }
 }

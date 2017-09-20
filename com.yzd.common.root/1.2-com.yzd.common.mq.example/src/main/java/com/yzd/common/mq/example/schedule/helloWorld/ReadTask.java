@@ -21,7 +21,8 @@ public class ReadTask extends AbstractTask {
         try{
             //具体的业务处理逻辑
             //任务操作异常或数据库异常
-            TimeUnit.SECONDS.sleep(30);
+            //TimeUnit.SECONDS.sleep(30);
+            TimeUnit.SECONDS.sleep(5);
             System.out.println("brpopExtByShardedJedisPoolExample2:value="+value);
         }catch (Exception ex){
             //log ex

@@ -29,7 +29,9 @@ public class ScheduleConfig implements SchedulingConfigurer {
         ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
         scheduler.setPoolSize(30);
         scheduler.setThreadNamePrefix("TaskScheduler-");
-        scheduler.setAwaitTerminationSeconds(60);
+        //设置调度任务线程池终止等待时间为12秒
+        //scheduler的终止是在应用关闭【applicationEvent instanceof ContextClosedEvent】之后执行的。
+        scheduler.setAwaitTerminationSeconds(1);
         scheduler.setWaitForTasksToCompleteOnShutdown(true);
         return scheduler;
     }

@@ -42,7 +42,7 @@ public class _HelloWorldJob {
         System.out.println("[writeTask]-End-currentTime= " + dateFormat.format(new Date()));
 
     }
-    @Scheduled(initialDelay = 3000, fixedDelay = 1000 * 5)
+    @Scheduled(initialDelay = 4000, fixedDelay = 1000 * 5)
     public void readTask() throws InterruptedException {
         SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
         System.out.println("[readTask]-Begin-currentTime= " + dateFormat.format(new Date()));
