@@ -60,12 +60,19 @@ public class ShardedRedisMqUtil {
         }
         this.shardedJedisPool = new ShardedJedisPool(poolConfig, shardedPoolList, Hashing.MURMUR_HASH);
         //
+        // 设置jedis连接池配置
+        JedisPoolConfig poolConfig_Map = new JedisPoolConfig();
+        poolConfig.setMaxTotal(SharedRedisConfig.shardedJedisPoolMap_JedisPoolSize);
+        poolConfig.setMaxIdle(SharedRedisConfig.shardedJedisPoolMap_JedisPoolSize);
+        poolConfig.setMinIdle(3);
+        poolConfig.setMaxWaitMillis(maxWaitMillis);
+        poolConfig.setTestOnBorrow(testOnBorrow);
         shardedJedisPoolMap=new ConcurrentHashMap<String, ShardedJedisPool>();
         for (String redisUrl:redisUrlList){
             JedisShardInfo Jedisinfo = new JedisShardInfo(redisUrl);
             Jedisinfo.setConnectionTimeout(timeout);
             Jedisinfo.setSoTimeout(timeout);
-            shardedJedisPoolMap.put(redisUrl,new ShardedJedisPool(poolConfig, Arrays.asList(Jedisinfo), Hashing.MURMUR_HASH));
+            shardedJedisPoolMap.put(redisUrl,new ShardedJedisPool(poolConfig_Map, Arrays.asList(Jedisinfo), Hashing.MURMUR_HASH));
         }
         //
     }

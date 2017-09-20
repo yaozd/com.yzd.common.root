@@ -1,5 +1,6 @@
 package com.yzd.common.mq.redis.job.lock;
 
+import com.yzd.common.mq.redis.job.reader.RedisJobReader;
 import com.yzd.common.mq.redis.sharded.ShardedRedisMqUtil;
 import org.apache.commons.lang.ObjectUtils;
 
@@ -15,6 +16,9 @@ public class RedisJobLockUtil {
         lockTask(key,timeoutSecond,myJobExecutorInf,0);
     }
     public static void lockTask(String key, long timeoutSecond, IMyJobExecutorInf myJobExecutorInf,int myJobExecutorAfterSleepSecond) {
+        //当获得退出命令后则不在执行任何操作
+        if(RedisJobReader.isShutdown){return;}
+        //
         ShardedRedisMqUtil redisUtil = ShardedRedisMqUtil.getInstance();
         String timestamp = String.valueOf(System.currentTimeMillis());
         CountDownLatch latch = new CountDownLatch(1);

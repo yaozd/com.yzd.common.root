@@ -1,4 +1,3 @@
-/*
 package com.yzd.common.mq.check;
 
 import com.yzd.common.mq.enumExt.JobLockEnum;
@@ -9,29 +8,22 @@ import com.yzd.common.mq.redis.job.lock.IMyJobExecutorInf;
 import com.yzd.common.mq.redis.job.lock.RedisJobLockUtil;
 import com.yzd.common.mq.redis.sharded.ShardedRedisMqUtil;
 import org.junit.Test;
-import redis.clients.jedis.JedisShardInfo;
-import redis.clients.jedis.ShardedJedisPool;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-*/
 /**
  * Created by zd.yao on 2017/8/30.
- *//*
-
+ */
 public class _MainTest {
     JobEnum keyEnum= JobLockEnum.HelloWorldJob;
 
-    */
-/**
+    /**
      * 初始思路
-     *//*
-
+     */
     @Test
     public void delSetKeyTaskExample(){
         ShardedRedisMqUtil redisUtil = ShardedRedisMqUtil.getInstance();
@@ -62,23 +54,20 @@ public class _MainTest {
         }
     }
 
-    */
-/**
+    /**
      * 对应==RedisJobCheckTask类代码
-     *//*
-
+     */
     @Test
     public void delSetKeyTaskExample1(){
         ShardedRedisMqUtil redisUtil = ShardedRedisMqUtil.getInstance();
-        Collection<JedisShardInfo> jedisCollection = redisUtil.getAllJedisShardInfo();
-        JedisShardInfo j=jedisCollection.iterator().next();
-        ShardedJedisPool shardedJedisPool =redisUtil.getOneShardedJedisPool(j);
-        long total = redisUtil.scardExt(shardedJedisPool, keyEnum.getSetName());
+        List<String> redisUrlList = redisUtil.getAllRedisUrls();
+        String redisUrl=redisUrlList.get(0);
+        long total = redisUtil.scardExt(redisUrl, keyEnum.getSetName());
         // 每5分钟获取当前消息的10%最多大值为200，进行消息删除重复消息；
         //200>countOfSrandMember>20
         int countOfSrandMember = (int) ((total + 10) * 0.1) + 20;
         countOfSrandMember = countOfSrandMember > 200 ? 200 : countOfSrandMember;
-        List<String> setList = redisUtil.srandMemberExt(shardedJedisPool,keyEnum.getSetName(), countOfSrandMember);
+        List<String> setList = redisUtil.srandMemberExt(redisUrl,keyEnum.getSetName(), countOfSrandMember);
         //
         for (String e : setList) {
             // 判断当前消息队列中是否存在此消息
@@ -100,22 +89,19 @@ public class _MainTest {
         }
     }
 
-    */
-/**
+    /**
      * 对应==CheckInvalidJob类代码
      * 等待所有线程执行完毕
      * @throws InterruptedException
-     *//*
-
+     */
     @Test
     public void delSetKeyTaskExample2() throws InterruptedException {
         ShardedRedisMqUtil redisUtil = ShardedRedisMqUtil.getInstance();
-        Collection<JedisShardInfo> jedisCollection = redisUtil.getAllJedisShardInfo();
-        ExecutorService executorService = Executors.newFixedThreadPool(jedisCollection.size());
-        CountDownLatch latch = new CountDownLatch(jedisCollection.size());
-        for (JedisShardInfo j : jedisCollection) {
-            ShardedJedisPool shardedJedisPool =redisUtil.getOneShardedJedisPool(j);
-            RedisJobCheckTask jedisExecutor=new RedisJobCheckTask(shardedJedisPool,keyEnum,latch);
+        List<String> redisUrlList = redisUtil.getAllRedisUrls();
+        ExecutorService executorService = Executors.newFixedThreadPool(redisUrlList.size());
+        CountDownLatch latch = new CountDownLatch(redisUrlList.size());
+        for (String redisUrl : redisUrlList) {
+            RedisJobCheckTask jedisExecutor=new RedisJobCheckTask(redisUrl,keyEnum,latch);
             executorService.execute(jedisExecutor);
         }
         latch.await();
@@ -123,11 +109,9 @@ public class _MainTest {
         executorService.awaitTermination(3, TimeUnit.SECONDS);
     }
 
-    */
-/**
+    /**
      *TODO  最终版-组合版
-     *//*
-
+     */
     //通过对当前的方法增加一个线程锁-确保当前只有一个任务在执行
     @Test
     public void delSetKeyTaskExample_final(){
@@ -139,4 +123,3 @@ public class _MainTest {
     }
 }
 
-*/
