@@ -68,6 +68,7 @@ public class RedisJobCheckTask implements Runnable {
             //先删除list集合中的值，再删除set集合中的值，确保值一定被删除
             redisUtil.sremExt(keyEnum.getSetName(), e);
             redisUtil.sremExt(keyEnum.getCheckTmpName(), e);
+            //主要用于测试时统计有哪些值被排除掉了。
             redisUtil.lpushExt("TEST_TMP_LIST", e);
             //endregion
         }
