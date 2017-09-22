@@ -27,7 +27,7 @@ public class _HelloWorldJob {
     //模拟程序仅执行一次的情况-真正开发时不需要isCloseWriter
     boolean isCloseWriter=false;
     //int myJobExecutorAfterSleepSecond=5; 单实例并且每5秒执行一次
-    @Scheduled(initialDelay = 3000, fixedDelay = 100)
+    @Scheduled(initialDelay = 3000, fixedDelay = 1000 * 5)
     public void writeTask() throws InterruptedException {
         //模拟程序仅执行一次的情况
         //if(isCloseWriter){return;}isCloseWriter=true;
@@ -67,7 +67,7 @@ public class _HelloWorldJob {
         //endregion
     }
     //int myJobExecutorAfterSleepSecond=5; 单实例并且每5秒执行一次
-    @Scheduled(initialDelay = 3000, fixedDelay = 100)
+    @Scheduled(initialDelay = 3000, fixedDelay = 1000*5)
     public void checkTask() throws InterruptedException {
         SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
         System.out.println("[checkTask]-Begin-currentTime= " + dateFormat.format(new Date()));

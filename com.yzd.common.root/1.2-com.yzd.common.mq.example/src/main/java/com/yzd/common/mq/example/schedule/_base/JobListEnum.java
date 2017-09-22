@@ -45,4 +45,8 @@ public enum JobListEnum implements JobEnum {
     public String getTokenBucketName(){
         return name;
     }
+    @Override
+    public String getCheckTmpName(){
+        return "jobCheckTmp-"+name;
+    }
 }

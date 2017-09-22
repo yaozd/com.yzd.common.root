@@ -11,7 +11,8 @@ import java.util.ResourceBundle;
 public class SharedRedisConfig {
     private static final String DEFAULT_REDIS_PROPERTIES = "shardedRedisMQ";
     private static ResourceBundle REDIS_CONFIG = ResourceBundle.getBundle(DEFAULT_REDIS_PROPERTIES);
-
+    //CHECK_IS_EXIST_TEMP_VAL 是临时检查的值不实际意义,只用于测试一个值是否存在
+    public static final String CHECK_IS_EXIST_TEMP_VAL="CHECK_IS_EXIST_TEMP_VAL";
     protected static String getConfigProperty(String key) {
         return REDIS_CONFIG.getString(key);
     }

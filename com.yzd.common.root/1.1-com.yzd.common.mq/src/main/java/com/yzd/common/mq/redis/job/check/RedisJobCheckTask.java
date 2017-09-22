@@ -3,6 +3,8 @@ package com.yzd.common.mq.redis.job.check;
 import com.yzd.common.mq.redis.job.enumExt.JobEnum;
 import com.yzd.common.mq.redis.job.mutesKey.RedisJobMutesKeyUtil;
 import com.yzd.common.mq.redis.sharded.ShardedRedisMqUtil;
+import com.yzd.common.mq.redis.sharded.SharedRedisConfig;
+import redis.clients.jedis.BinaryClient;
 
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -37,34 +39,39 @@ public class RedisJobCheckTask implements Runnable {
         int countOfSrandMember = (int) ((total + 10) * 0.1) + 20;
         countOfSrandMember = countOfSrandMember > 200 ? 200 : countOfSrandMember;
         List<String> setList = redisUtil.srandMemberExt(redisUrl,keyEnum.getSetName(), countOfSrandMember);
+        if(setList.size()==0)return;
+        String[] checkTempList = new String[setList.size()];
+        setList.toArray(checkTempList);
+        redisUtil.delExtByRedisUrl(redisUrl,keyEnum.getCheckTmpName());
+        redisUtil.saddExtByRedisUrl(redisUrl,keyEnum.getCheckTmpName(),checkTempList);
         //
         for (String e : setList) {
-            // 判断当前消息队列中是否存在此消息
-            // 当count为负数时，移除方向是从尾到头-删除所有
-            long valOfLrem = redisUtil.lremExt(keyEnum.getListName(), 0, e);
-            if (valOfLrem >0 ) {
-                //region 尽可能保证数据不重复添加
-                boolean valOfSrem = redisUtil.sremExt(keyEnum.getSetName(), e);
-                //set中删除失败则正明该元素已经不存在
-                if(!valOfSrem)continue;
-                //set添加失败则证明该元素已经存在
-                long countOfsadd = redisUtil.saddExt(keyEnum.getSetName(), e);
-                if(countOfsadd==0)continue;
-                // 常规操作-从头部插入
-                redisUtil.lpushExt(keyEnum.getListName(), e);
-                //endregion
+           //返回值是【-1则pivot不存在】【0则当前list集合不存在】
+           Long linsertLong=  redisUtil.linsertExt(keyEnum.getListName(), BinaryClient.LIST_POSITION.AFTER, e, SharedRedisConfig.CHECK_IS_EXIST_TEMP_VAL);
+            if(linsertLong>0){
+                redisUtil.sremExt(keyEnum.getCheckTmpName(), e);
+                redisUtil.lremExt2(keyEnum.getListName(), 0, e, SharedRedisConfig.CHECK_IS_EXIST_TEMP_VAL);
                 continue;
             }
             // 验证是否当前消息正在运行
-            boolean isExists = RedisJobMutesKeyUtil.exists(keyEnum, e);
-            if (isExists) {
+            boolean isExistsMutesKey = RedisJobMutesKeyUtil.exists(keyEnum, e);
+            if (isExistsMutesKey) {
+                redisUtil.sremExt(keyEnum.getCheckTmpName(), e);
+                continue;
+            }
+            //
+            boolean isExistCheckTmpMember=redisUtil.sIsMemberExtByRedisUrl(redisUrl,keyEnum.getCheckTmpName(), e);
+            if(!isExistCheckTmpMember){
                 continue;
             }
             //region 当前消息中不存在此消息同时当前正在运行消息中也不存在，则进行删除set中的消息
             //先删除list集合中的值，再删除set集合中的值，确保值一定被删除
-            boolean valOfSrem = redisUtil.sremExt(keyEnum.getSetName(), e);
+            redisUtil.sremExt(keyEnum.getSetName(), e);
+            redisUtil.sremExt(keyEnum.getCheckTmpName(), e);
+            redisUtil.lpushExt("TEST_TMP_LIST", e);
             //endregion
-            System.out.println("【RedisJobCheckTask】-删除set中的消息="+valOfSrem);
         }
+        redisUtil.delExtByRedisUrl(redisUrl,keyEnum.getCheckTmpName());
+        redisUtil.lremExtByRedisUrl(redisUrl,keyEnum.getListName(),0,SharedRedisConfig.CHECK_IS_EXIST_TEMP_VAL);
     }
 }

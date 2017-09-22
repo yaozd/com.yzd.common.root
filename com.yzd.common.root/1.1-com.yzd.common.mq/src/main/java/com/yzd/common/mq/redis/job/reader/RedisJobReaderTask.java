@@ -1,6 +1,7 @@
 package com.yzd.common.mq.redis.job.reader;
 
 import com.yzd.common.mq.redis.sharded.ShardedRedisMqUtil;
+import com.yzd.common.mq.redis.sharded.SharedRedisConfig;
 import org.apache.commons.lang.StringUtils;
 
 import java.util.concurrent.ArrayBlockingQueue;
@@ -76,6 +77,10 @@ public class RedisJobReaderTask implements Runnable {
         }
         //redis 阻塞超时的情况下处理
         if(StringUtils.isBlank(value)){
+            return null;
+        }
+        //CHECK_IS_EXIST_TEMP_VAL 是临时检查的值不实际意义
+        if(SharedRedisConfig.CHECK_IS_EXIST_TEMP_VAL.equals(value)){
             return null;
         }
         return value;

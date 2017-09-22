@@ -16,4 +16,6 @@ public interface JobEnum {
     String getMutesKeyName();
     //阻塞队列的令牌名称
     String getTokenBucketName();
+    //检查时临时存储
+    String getCheckTmpName();
 }

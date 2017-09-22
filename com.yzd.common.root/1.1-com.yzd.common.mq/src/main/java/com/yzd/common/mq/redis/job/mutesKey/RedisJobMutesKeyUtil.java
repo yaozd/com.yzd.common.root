@@ -34,9 +34,10 @@ public class RedisJobMutesKeyUtil {
     public static Boolean del(JobEnum keyEnum, String val){
         String mutexKey = getMutexKey(keyEnum, val);
         ShardedRedisMqUtil redisUtil = ShardedRedisMqUtil.getInstance();
+        redisUtil.sremExt(keyEnum.getCheckTmpName(),val);
         //先删除set排除消息对列再删除mutexKey互斥锁
-        redisUtil.sremExt(keyEnum.getSetName(), val);
         Long delNum= redisUtil.delExt(val,mutexKey);
+        redisUtil.sremExt(keyEnum.getSetName(), val);
         if(delNum==0){
             return false;
         }

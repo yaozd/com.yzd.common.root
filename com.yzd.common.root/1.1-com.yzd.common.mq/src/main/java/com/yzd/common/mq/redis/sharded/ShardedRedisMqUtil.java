@@ -212,7 +212,7 @@ public class ShardedRedisMqUtil {
 
     /**
      * 在列表的元素前或者后插入元素，返回List的长度
-     *
+     * 返回值是【-1则pivot不存在】【0则当前list集合不存在】
      * @param key
      * @param where LIST_POSITION
      * @param pivot 以该元素作为参照物，是在它之前，还是之后（pivot：枢轴;中心点，中枢;[物]支点，支枢;[体]回转运动。）
@@ -858,4 +858,68 @@ public class ShardedRedisMqUtil {
         });
     }
     /**************************** redis 列表List扩展 end***************************/
+    public Boolean sIsMemberExtByRedisUrl(String redisUrl, String key, String member){
+        return execute(redisUrl, key, new ShardedJedisPoolExecutor<Boolean>() {
+            @Override
+            public Boolean execute(ShardedJedis jedis) {
+                Boolean value = jedis.sismember(key, member);
+                return value;
+            }
+        });
+    }
+    public Long delExtByRedisUrl(String redisUrl, String key){
+        return execute(redisUrl, key, new ShardedJedisPoolExecutor<Long>() {
+            @Override
+            public Long execute(ShardedJedis jedis) {
+                Long value = jedis.del(key);
+                return value;
+            }
+        });
+    }
+    public Long saddExtByRedisUrl(String redisUrl,final String key, String...  value) {
+        return execute(redisUrl,key, new ShardedJedisPoolExecutor<Long>() {
+            @Override
+            public Long execute(ShardedJedis shardedJedis) {
+                Long length = shardedJedis.sadd(key, value);
+                return length;
+            }
+        });
+    }
+    public Long linsertExt(String key, BinaryClient.LIST_POSITION where, String pivot, String value) {
+        return execute(key, new ShardedRedisExecutor<Long>() {
+            @Override
+            public Long execute(ShardedJedis shardedJedis) {
+                if (StringUtils.isBlank(pivot)) {
+                    throw new IllegalStateException("[linsertExt]的value参数不能为空");
+                }
+                String valueKey = pivot.trim();
+                Jedis j = (Jedis) shardedJedis.getShard(valueKey);
+                Long length = j.linsert(key, where, pivot, value);
+                return length;
+            }
+        });
+    }
+    public Long lremExt2(final String key,final long count, final String value,String check) {
+        return execute(key, new ShardedRedisExecutor<Long>() {
+            @Override
+            public Long execute(ShardedJedis shardedJedis) {
+                if (StringUtils.isBlank(value)) {
+                    throw new IllegalStateException("[lremExt]的value参数不能为空");
+                }
+                String valueKey = value.trim();
+                Jedis j = (Jedis) shardedJedis.getShard(valueKey);
+                Long length = j.lrem(key, count, check);
+                return length;
+            }
+        });
+    }
+    public Long lremExtByRedisUrl(String redisUrl,final String key,final long count, final String value) {
+        return execute(redisUrl,key, new ShardedJedisPoolExecutor<Long>() {
+            @Override
+            public Long execute(ShardedJedis shardedJedis) {
+                Long length = shardedJedis.lrem(key, count, value);
+                return length;
+            }
+        });
+    }
 }
