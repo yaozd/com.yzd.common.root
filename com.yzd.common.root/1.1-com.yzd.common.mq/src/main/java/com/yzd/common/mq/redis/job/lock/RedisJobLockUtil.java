@@ -37,9 +37,13 @@ public class RedisJobLockUtil {
             try {
                 //模拟业务执行时间
                 //TimeUnit.SECONDS.sleep(50);
+                long  begin = System.currentTimeMillis();
                 myJobExecutorInf.execute();
+                long  end = System.currentTimeMillis();
+                long executeTime=(end-begin)/1000;
+                int restSleepTime= (int) (myJobExecutorAfterSleepSecond-executeTime);
                 //主要是保证单实例程序在某一时间段内执行的次数
-                myJobExecutorAfterSleepFun(myJobExecutorAfterSleepSecond);
+                myJobExecutorAfterSleepFun(restSleepTime);
             } catch (Exception e) {
                 e.printStackTrace();
             }finally {
