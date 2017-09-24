@@ -47,25 +47,35 @@ public class RedisJobCheckTask implements Runnable {
         redisUtil.delExtByRedisUrl(redisUrl, keyEnum.getCheckTmpName());
         redisUtil.saddExtByRedisUrl(redisUrl, keyEnum.getCheckTmpName(), checkTempList);
         //关键点-数据从redis中读取到数据加锁之间有一个空白时间--是造成重复添加的原因
-        //第一次确认需要删除的元素
+        //第一次-过滤掉已经不存在set集合中的元素
         List<String> setList_OneSure=new ArrayList<>();
-        //
         for (String e : setList) {
-            if (isNotNeedRemove(redisUtil, e)) continue;
+            Boolean isNotExistSetMember=redisUtil.sIsMemberExtByRedisUrl(redisUrl, keyEnum.getSetName(),e)==false;
+            if (isNotExistSetMember){
+                redisUtil.sremExt(keyEnum.getCheckTmpName(), e);
+                continue;
+            }
             setList_OneSure.add(e);
         }
         if(setList_OneSure.size()==0)return;
-        //第一次与第二次中休眠3秒
-        //解决数据从redis中读取到数据加锁之间有一个空白时间--是造成重复添加的问题
-        sleepTime_SECONDS_3();
-        //第二次确认需要删除的元素
+        //第二次-确认需要删除的元素
         List<String> setList_TwoSure=new ArrayList<>();
-        for(String e:setList_OneSure){
+        for (String e : setList_OneSure) {
             if (isNotNeedRemove(redisUtil, e)) continue;
             setList_TwoSure.add(e);
         }
         if(setList_TwoSure.size()==0)return;
+        //第二次与第三次中休眠3秒
+        //解决数据从redis中读取到数据加锁之间有一个空白时间--是造成重复添加的问题
+        sleepTime_SECONDS_3();
+        //第三次-再次确认需要删除的元素
+        List<String> setList_ThreeSure=new ArrayList<>();
         for(String e:setList_TwoSure){
+            if (isNotNeedRemove(redisUtil, e)) continue;
+            setList_ThreeSure.add(e);
+        }
+        if(setList_ThreeSure.size()==0)return;
+        for(String e:setList_ThreeSure){
             //region 当前消息中不存在此消息同时当前正在运行消息中也不存在，则进行删除set中的消息
             //先删除list集合中的值，再删除set集合中的值，确保值一定被删除
             redisUtil.sremExt(keyEnum.getSetName(), e);
