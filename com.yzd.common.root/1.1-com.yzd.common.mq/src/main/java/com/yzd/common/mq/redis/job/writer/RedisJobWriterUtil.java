@@ -2,11 +2,14 @@ package com.yzd.common.mq.redis.job.writer;
 
 import com.yzd.common.mq.redis.job.enumExt.JobEnum;
 import com.yzd.common.mq.redis.sharded.ShardedRedisMqUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Created by zd.yao on 2017/8/29.
  */
 public class RedisJobWriterUtil {
+    private static final Logger logger = LoggerFactory.getLogger(RedisJobWriterUtil.class);
     /**
      * 写入消息
      * @param keyEnum
@@ -20,7 +23,9 @@ public class RedisJobWriterUtil {
         if (countOfsadd == 1){
             //常规操作-从尾部插入
             Long result = redisUtil.rpushExt(keyEnum.getListName(), val);
-            System.out.println("RedisJobWriterUtil-"+result);
+            if(logger.isDebugEnabled()){
+                logger.debug("将数据写入到reids消息队列中result="+result);
+            }
         }
     }
 }

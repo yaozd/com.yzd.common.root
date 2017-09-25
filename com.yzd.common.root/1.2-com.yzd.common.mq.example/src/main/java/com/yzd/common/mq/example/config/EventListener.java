@@ -2,6 +2,8 @@ package com.yzd.common.mq.example.config;
 
 import com.yzd.common.mq.example.schedule._base.TokenBucketMap;
 import com.yzd.common.mq.redis.job.reader.RedisJobReader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextClosedEvent;
@@ -15,12 +17,12 @@ import java.util.concurrent.TimeUnit;
  * Created by zd.yao on 2017/9/15.
  */
 public class EventListener  implements ApplicationListener {
+    private static final Logger logger = LoggerFactory.getLogger(EventListener.class);
     @Override
     public void onApplicationEvent(ApplicationEvent applicationEvent) {
         //应用关闭-kill PID 不要使用kill -9 PID
         if (applicationEvent instanceof ContextClosedEvent) {
-            System.out.println("应用关闭-kill PID 不要使用kill -9 PID");
-            System.out.println("TokenBucketMap.getInstance().getMapSize()="+ TokenBucketMap.getInstance().getMapSize());
+            logger.info("当前任务数=" + TokenBucketMap.getInstance().getMapSize());
             //关闭消息队列的读取任务
             RedisJobReader.shutdown();
             //
@@ -45,7 +47,7 @@ public class EventListener  implements ApplicationListener {
                 executor.awaitTermination(10, TimeUnit.SECONDS);
             } catch (InterruptedException e) {e.printStackTrace();}
             //endregion
-            System.out.println("应用关闭-可以优雅退出");
+            logger.info("已优雅退出可以关闭应用程序");
             return;
         }
     }

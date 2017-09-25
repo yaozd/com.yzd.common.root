@@ -18,7 +18,7 @@ public class WriteTask implements IMyJobExecutorInf {
     }
     //将任务写入到消息队列中
     void doWork() {
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 1000; i++) {
             String val = "id=" + i;
             RedisJobWriterUtil.write(keyEnum, val);
         }

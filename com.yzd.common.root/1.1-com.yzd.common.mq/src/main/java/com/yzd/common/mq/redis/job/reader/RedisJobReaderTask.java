@@ -3,6 +3,8 @@ package com.yzd.common.mq.redis.job.reader;
 import com.yzd.common.mq.redis.sharded.ShardedRedisMqUtil;
 import com.yzd.common.mq.redis.sharded.SharedRedisConfig;
 import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.SynchronousQueue;
@@ -12,6 +14,7 @@ import java.util.concurrent.TimeUnit;
  * Created by zd.yao on 2017/8/28.
  */
 public class RedisJobReaderTask implements Runnable {
+    private static final Logger logger = LoggerFactory.getLogger(RedisJobReaderTask.class);
     private String redisUrl;
     private String listKey;
     private SynchronousQueue<String> data;
@@ -64,7 +67,9 @@ public class RedisJobReaderTask implements Runnable {
             //阻塞指令-读取reids的消息队列
             ShardedRedisMqUtil redisUtil = ShardedRedisMqUtil.getInstance();
             value=redisUtil.blpopExt(redisUrl, listKey, 5);
-            System.out.println("RedisJobReaderTask-阻塞指令-读取reids的消息队列"+value);
+            if(logger.isDebugEnabled()){
+                logger.debug("通过阻塞指令读取reids消息队列的值value="+value);
+            }
         }catch (Exception e){
             //log 记录日志
             e.printStackTrace();

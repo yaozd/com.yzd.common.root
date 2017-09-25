@@ -2,6 +2,8 @@ package com.yzd.common.mq.redis.job.lock;
 
 import com.yzd.common.mq.redis.sharded.ShardedRedisMqUtil;
 import org.apache.commons.lang.ObjectUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -10,6 +12,7 @@ import java.util.concurrent.TimeUnit;
  * Created by zd.yao on 2017/7/12.
  */
 public class ExpireUpdateThread extends Thread {
+    private static final Logger logger = LoggerFactory.getLogger(ExpireUpdateThread.class);
     String key;
     int timeoutSecond;
     String timestamp;
@@ -35,13 +38,17 @@ public class ExpireUpdateThread extends Thread {
             }else {
                 latch.countDown();
             }
-            System.out.println("ExpireUpdateThread-latch.getCount():"+latch.getCount());
+            /*if(logger.isDebugEnabled()){
+                logger.debug("ExpireUpdateThread-latch.getCount():"+latch.getCount());
+            }*/
             try {
                 TimeUnit.SECONDS.sleep(timeoutSecond);
             } catch (InterruptedException e) {
-                System.out.println("[ExpireUpdateThread]中断线程-快速关闭ExpireUpdateThread线程");
                 //此处是人为触发，需吃掉线程中断异常-快速关闭ExpireUpdateThread线程
                 //throw new IllegalStateException(e);
+                if(logger.isDebugEnabled()){
+                    logger.debug("通过中断信号-快速关闭ExpireUpdateThread线程");
+                }
             }
         }
     }
