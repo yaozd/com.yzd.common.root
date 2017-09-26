@@ -35,7 +35,7 @@ public class RedisJobReaderTask implements Runnable {
                 //相当于令牌桶-通过令牌来控制有效读取的任务数等于可运行的处理的线程数
                 TokenBucket.put(1);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                logger.error("thread interrupted",e);
             }
             //从redis中读取消息
             String value = getValueWhile();
@@ -44,7 +44,7 @@ public class RedisJobReaderTask implements Runnable {
                 data.put(value);
             } catch (InterruptedException e) {
                 //log 记录日志
-                e.printStackTrace();
+                logger.error("thread interrupted",e);
             }
         }
     }
@@ -72,11 +72,11 @@ public class RedisJobReaderTask implements Runnable {
             }
         }catch (Exception e){
             //log 记录日志
-            e.printStackTrace();
+            logger.error("[getValue]", e);
             try {
                 TimeUnit.SECONDS.sleep(10);
             } catch (InterruptedException e1) {
-                e1.printStackTrace();
+                logger.error("thread interrupted",e1);
             }
             return null;
         }
