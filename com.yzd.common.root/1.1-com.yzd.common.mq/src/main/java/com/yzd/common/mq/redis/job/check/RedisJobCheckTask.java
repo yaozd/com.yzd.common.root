@@ -4,6 +4,8 @@ import com.yzd.common.mq.redis.job.enumExt.JobEnum;
 import com.yzd.common.mq.redis.job.mutesKey.RedisJobMutesKeyUtil;
 import com.yzd.common.mq.redis.sharded.ShardedRedisMqUtil;
 import com.yzd.common.mq.redis.sharded.SharedRedisConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import redis.clients.jedis.BinaryClient;
 
 import java.util.ArrayList;
@@ -15,6 +17,7 @@ import java.util.concurrent.TimeUnit;
  * Created by zd.yao on 2017/8/30.
  */
 public class RedisJobCheckTask implements Runnable {
+    private static final Logger logger = LoggerFactory.getLogger(RedisJobCheckTask.class);
     private String redisUrl;
     private JobEnum keyEnum;
     private CountDownLatch latch;
@@ -89,7 +92,7 @@ public class RedisJobCheckTask implements Runnable {
         try {
             TimeUnit.SECONDS.sleep(3);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            logger.error("thread interrupted", e);
         }
     }
 
