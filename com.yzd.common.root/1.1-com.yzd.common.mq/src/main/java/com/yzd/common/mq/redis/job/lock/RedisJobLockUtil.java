@@ -3,6 +3,8 @@ package com.yzd.common.mq.redis.job.lock;
 import com.yzd.common.mq.redis.job.reader.RedisJobReader;
 import com.yzd.common.mq.redis.sharded.ShardedRedisMqUtil;
 import org.apache.commons.lang.ObjectUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -11,6 +13,7 @@ import java.util.concurrent.TimeUnit;
  * Created by zd.yao on 2017/8/28.
  */
 public class RedisJobLockUtil {
+    private static final Logger logger = LoggerFactory.getLogger(RedisJobLockUtil.class);
     //对当前执行的任务进行加锁
     public static void lockTask(String key, long timeoutSecond, IMyJobExecutorInf myJobExecutorInf){
         lockTask(key,timeoutSecond,myJobExecutorInf,0);
@@ -45,7 +48,7 @@ public class RedisJobLockUtil {
                 //主要是保证单实例程序在某一时间段内执行的次数
                 myJobExecutorAfterSleepFun(restSleepTime);
             } catch (Exception e) {
-                e.printStackTrace();
+                logger.error("[lockTask]", e);
             }finally {
                 //业务完成
                 String timestampInRedis = redisUtil.get(key);
@@ -66,7 +69,6 @@ public class RedisJobLockUtil {
             TimeUnit.SECONDS.sleep(myJobExecutorAfterSleepSecond);
         } catch (InterruptedException e) {
             //此处人为故意吃掉异常
-            //e.printStackTrace();
         }
     }
 }
