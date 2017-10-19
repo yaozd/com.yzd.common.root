@@ -1,6 +1,7 @@
 package com.yzd.common.mq.example.schedule.helloWorld;
 
 import com.yzd.common.mq.example.schedule._base.JobListEnum;
+import com.yzd.common.mq.example.schedule._base.TimeLogUtil;
 import com.yzd.common.mq.example.schedule._base.WorkThreadPool;
 import com.yzd.common.mq.redis.job.check.CheckInvalidJob;
 import com.yzd.common.mq.redis.job.enumExt.JobEnum;
@@ -36,13 +37,16 @@ public class _HelloWorldJob {
         //if(isCloseWriter){return;}isCloseWriter=true;
         //
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-DD HH:mm:ss");
-        logger.info("[writeTask]-Begin-currentTime= " + dateFormat.format(new Date()));
+        String beginLog="[writeTask]-Begin-currentTime= " + dateFormat.format(new Date());
         int myJobExecutorAfterSleepSecond=0;
         //region 对当前执行的任务进行加锁--具体的实现可参考lock下例子
         long timeoutSecond = 10;
         RedisJobLockUtil.lockTask(keyEnum.getLockWriterName(), timeoutSecond,new WriteTask(keyEnum),myJobExecutorAfterSleepSecond);
         //endregion
-        logger.info("[writeTask]-End-currentTime= " + dateFormat.format(new Date()));
+        String endLog="[writeTask]-End-currentTime= " + dateFormat.format(new Date());
+        if(TimeLogUtil.getInstance().isNext5Minutes(this.getClass(),"checkTask")){
+            logger.info("避免频繁打印-每5分钟记录一次日志："+beginLog+endLog);
+        }
 
     }
     @Scheduled(initialDelay = 4000, fixedDelay = 10 * 5)
@@ -73,7 +77,7 @@ public class _HelloWorldJob {
     @Scheduled(initialDelay = 3000, fixedDelay = 10*5)
     public void checkTask() throws InterruptedException {
         SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
-        logger.info("[checkTask]-Begin-currentTime= " + dateFormat.format(new Date()));
+        String beginLog="[checkTask]-Begin-currentTime= " + dateFormat.format(new Date());
         //region
         long timeoutSecond = 10;
         IMyJobExecutorInf myJobExecutorInf=new CheckInvalidJob(keyEnum);
@@ -81,6 +85,9 @@ public class _HelloWorldJob {
         //对当前执行的任务进行加锁--具体的实现可参考lock下例子
         RedisJobLockUtil.lockTask(keyEnum.getLockCheckName(), timeoutSecond, myJobExecutorInf,myJobExecutorAfterSleepSecond);
         //endregion
-        logger.info("[checkTask]-End-currentTime= " + dateFormat.format(new Date()));
+        String endLog="[checkTask]-End-currentTime= " + dateFormat.format(new Date());
+        if(TimeLogUtil.getInstance().isNext5Minutes(this.getClass(),"checkTask")){
+            logger.info("避免频繁打印-每5分钟记录一次日志："+beginLog+endLog);
+        }
     }
 }
