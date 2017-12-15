@@ -11,6 +11,8 @@
     <modules>
         <module>1.1-com.yzd.common.mq</module>
         <module>1.2-com.yzd.common.mq.example</module>
+        <module>2.1-com.yzd.common.pubsub</module>
+        <module>2.1-com.yzd.common.pubsub.example</module>
     </modules>
     <parent>
         <groupId>org.springframework.boot</groupId>
