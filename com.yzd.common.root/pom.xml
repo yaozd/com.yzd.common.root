@@ -13,6 +13,7 @@
         <module>1.2-com.yzd.common.mq.example</module>
         <module>2.1-com.yzd.common.pubsub</module>
         <module>2.1-com.yzd.common.pubsub.example</module>
+        <module>3.1-com.yzd.common.cache</module>
     </modules>
     <parent>
         <groupId>org.springframework.boot</groupId>
