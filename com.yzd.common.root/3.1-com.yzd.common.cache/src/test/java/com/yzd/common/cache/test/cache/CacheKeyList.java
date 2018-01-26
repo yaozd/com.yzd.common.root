@@ -15,6 +15,6 @@ public class CacheKeyList {
     //key=项目缓存编号.KeyName_XXX
     //公共数据缓存规则：缓存一分钟，NULL缓存15秒，5秒互斥，300毫秒自旋。
     private static CachedSetting newCachedSetting(String key,String desc,String version){
-       return new CachedSetting(com_hb_insure_app_api,key, 60, 15, 5,300,desc,version);
+       return new CachedSetting(com_hb_insure_app_api,key, 60, 15, 5,300,version,desc);
     }
 }
