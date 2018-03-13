@@ -63,4 +63,10 @@ public class ShardedRedisUtil_UnitTest {
                     }
                 });
     }
+    @Test
+    public void addExpireForSet(){
+        ShardedRedisUtil redisUtil = ShardedRedisUtil.getInstance();
+        redisUtil.sadd("set.test","1");
+        redisUtil.expire("set.test",100);
+    }
 }

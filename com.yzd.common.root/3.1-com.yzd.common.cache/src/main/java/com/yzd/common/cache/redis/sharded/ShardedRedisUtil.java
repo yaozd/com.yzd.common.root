@@ -9,13 +9,12 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import redis.clients.jedis.JedisPoolConfig;
-import redis.clients.jedis.JedisShardInfo;
-import redis.clients.jedis.ShardedJedis;
-import redis.clients.jedis.ShardedJedisPool;
+import redis.clients.jedis.*;
 import redis.clients.util.Hashing;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -413,5 +412,267 @@ public class ShardedRedisUtil {
         //System.out.println(3); //debug
         value = new CachedWrapper<T>(result);
         return value;
+    }
+
+    /**************************** redis 列表List扩展 start***************************/
+    /**
+     * 将一个值插入到列表头部，value可以重复，返回列表的长度
+     * @param key
+     * @param value String
+     * @return 返回List的长度
+     */
+    public Long lpush(String key, String value) {
+        return execute(key, new ShardedRedisExecutor<Long>() {
+            @Override
+            public Long execute(ShardedJedis jedis) {
+                Long length = jedis.lpush(key, value);
+                return length;
+            }
+        });
+    }
+    /**
+     * 移出并获取列表的【最后一个元素】， 如果列表没有元素会阻塞列表直到等待超时或发现可弹出元素为止。
+     * @param timeout 单位为秒
+     * @param key
+     * <li>当有多个key时，只要某个key值的列表有内容，即马上返回，不再阻塞。</li>
+     * <li>当所有key都没有内容或不存在时，则会阻塞，直到有值返回或者超时。</li>
+     * <li>当超期时间到达时，keys列表仍然没有内容，则返回Null</li>
+     * @return List<String>
+     */
+    public  String brpop(String key,int timeout){
+        return execute(key, new ShardedRedisExecutor<String>() {
+            @Override
+            public String execute(ShardedJedis jedis) {
+                List<String> value = jedis.brpop(timeout, key);
+                if (value == null || value.isEmpty() || value.size() < 2) return null;
+                return value.get(1);
+            }
+        });
+    }
+    /**
+     * 向集合添加一个或多个成员，返回添加成功的数量
+     * @param key
+     * @param value
+     * @return Long
+     */
+    public  Long sadd(final String key, final String value){
+        return execute(key, new ShardedRedisExecutor<Long>() {
+            @Override
+            public Long execute(ShardedJedis jedis) {
+                Long length = jedis.sadd(key, value);
+                return length;
+            }
+        });
+    }
+    /**
+     * 移除并返回集合中的一个随机元素
+     * <li>当set为空或者不存在时，返回Null</li>
+     * @param key
+     * @return String
+     */
+    public String spop(String key){
+        return execute(key, new ShardedRedisExecutor<String>() {
+            @Override
+            public String execute(ShardedJedis jedis) {
+                return jedis.spop(key);
+            }
+        });
+    }
+    /**
+     * 移除集合中一个或多个成员
+     * @param key
+     * @param value
+     * @return
+     */
+    public Boolean srem(final String key, final String value){
+        return execute(key, new ShardedRedisExecutor<Boolean>() {
+            @Override
+            public Boolean execute(ShardedJedis jedis) {
+                Long num = jedis.srem(key, value);
+                if(num > 0){
+                    return true;
+                }
+                return false;
+            }
+        });
+    }
+
+    /**
+     * 2018-03-13-1218
+     * 定制方法，特用于com.yzd.cancal,缓存更新组件
+     * 作用：获得缓存资源的时间戳版本号
+     * @param key
+     * @param keyExpireSec
+     * @param nullValueExpireSec
+     * @param keyMutexExpireSec
+     * @param sleepMilliseconds
+     * @param executor
+     * @return
+     */
+    public  CachedWrapper<String> getTimestampKey(final String key,
+                                                           final int keyExpireSec,
+                                                           final int nullValueExpireSec,
+                                                           final int keyMutexExpireSec,
+                                                           final int sleepMilliseconds,
+                                                           CachedWrapperExecutor<String> executor)  {
+        if (StringUtils.isBlank(key)) {
+            throw new IllegalStateException("key值不能为空。");
+        }
+        if (keyExpireSec < nullValueExpireSec) {
+            throw new IllegalStateException("key的过期时间必须大于查询结果为NULL值时的过期时间。");
+        }
+        if (keyExpireSec < keyMutexExpireSec) {
+            throw new IllegalStateException("key的过期时间必须大于互斥key的过期时间。");
+        }
+        if (keyMutexExpireSec > 10) {
+            throw new IllegalStateException("互斥key的过期时间必须小于10秒。");
+        }
+        if (sleepMilliseconds > 2000) {
+            throw new IllegalStateException("循环请求sleep休眠时间必须小于2000毫秒。");
+        }
+        CachedWrapper<String> value;
+        String key_mutex = "mutexKey_" + key;
+        //不需要对数据进行缓存
+        if (keyExpireSec == 0 && nullValueExpireSec == 0 && keyMutexExpireSec == 0) {
+            //获取需要缓存的数据-从数据库或其他的地方查询
+            String result = executor.execute();
+            value = new CachedWrapper<String>(result);
+            return value;
+        }
+        while (true) {
+            value = getCachedWrapper(key);
+            //System.out.println(1); //debug
+            if (value != null) return value;
+            if (set(key_mutex, "1", "NX", "EX", keyMutexExpireSec) == null) {
+                //休眠的具体时间必要根据实际的情况做调整
+                //目前暂定300毫秒不会影响到客户体验
+                try {
+                    Thread.sleep(sleepMilliseconds);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                //System.out.println(2); //debug
+                continue;
+            }
+            try
+            {
+                //获取需要缓存的数据-从数据库或其他的地方查询
+                String result = executor.execute();
+                String saveAllKeySetName="SaveAllKeySet:"+result;
+                String expireAllKeySet="ExpireAllKeySet";
+                sadd(expireAllKeySet,saveAllKeySetName);
+                //初始创建时间
+                SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                sadd(saveAllKeySetName,"##INIT-TIME##="+df.format(new Date()));
+                expire(saveAllKeySetName,10000);
+                srem(expireAllKeySet,saveAllKeySetName);
+
+                if (result == null) {
+                    setCachedWrapper(key, nullValueExpireSec, null);
+                } else {
+                    setCachedWrapper(key, keyExpireSec, result);
+                }
+                //System.out.println(3); //debug
+                value = new CachedWrapper<String>(result);
+                return value;
+            }
+            finally
+            {
+                del(key_mutex);
+            }
+        }
+    }
+    public <T> CachedWrapper<T> getPublicCachedWrapperByTimestampKeyValue(CachedSetting cachedSetting, String where,String timestampKeyValue, CachedWrapperExecutor<T> executor) {
+        //cachedSetting.getVersion() 代指缓存数据结构的版本号。当数据结构发生变化时版本号也会更改
+        String whereFullVal = cachedSetting.getVersion() + "|" + where;
+        String key = cachedSetting.getKeyFullName() + CachedKeyUtil.KeyMd5(whereFullVal);
+        return this.getCachedWrapperByTimestampKeyValue(key, cachedSetting.getKeyExpireSec(), cachedSetting.getNullValueExpireSec(), cachedSetting.getKeyMutexExpireSec(), cachedSetting.getSleepMilliseconds(),timestampKeyValue, executor);
+    }
+
+    /**
+     * 2018-03-13-1218
+     * 定制方法，特用于com.yzd.cancal,缓存更新组件
+     * 作用：根缓存资源的时间戳版本号，将查询结果的缓存到REDIS当中
+     * @param key
+     * @param keyExpireSec
+     * @param nullValueExpireSec
+     * @param keyMutexExpireSec
+     * @param sleepMilliseconds
+     * @param timestampKeyValue
+     * @param executor
+     * @param <T>
+     * @return
+     */
+    public <T> CachedWrapper<T> getCachedWrapperByTimestampKeyValue(final String key,
+                                                                    final int keyExpireSec,
+                                                                    final int nullValueExpireSec,
+                                                                    final int keyMutexExpireSec,
+                                                                    final int sleepMilliseconds,
+                                                                    final String timestampKeyValue,
+                                                                    CachedWrapperExecutor<T> executor) {
+        if (StringUtils.isBlank(key)) {
+            throw new IllegalStateException("key值不能为空。");
+        }
+        if (keyExpireSec < nullValueExpireSec) {
+            throw new IllegalStateException("key的过期时间必须大于查询结果为NULL值时的过期时间。");
+        }
+        if (keyExpireSec < keyMutexExpireSec) {
+            throw new IllegalStateException("key的过期时间必须大于互斥key的过期时间。");
+        }
+        if (keyMutexExpireSec > 10) {
+            throw new IllegalStateException("互斥key的过期时间必须小于10秒。");
+        }
+        if (sleepMilliseconds > 2000) {
+            throw new IllegalStateException("循环请求sleep休眠时间必须小于2000毫秒。");
+        }
+        if (StringUtils.isBlank(timestampKeyValue)) {
+            throw new IllegalStateException("缓存资源版本的时间戳timestampKeyValue值不能为空。");
+        }
+        CachedWrapper<T> value;
+        String key_mutex = "mutexKey_" + key;
+        //不需要对数据进行缓存
+        if (keyExpireSec == 0 && nullValueExpireSec == 0 && keyMutexExpireSec == 0) {
+            //获取需要缓存的数据-从数据库或其他的地方查询
+            T result = executor.execute();
+            value = new CachedWrapper<T>(result);
+            return value;
+        }
+        while (true) {
+            value = getCachedWrapper(key);
+            //System.out.println(1); //debug
+            if (value != null) return value;
+            if (set(key_mutex, "1", "NX", "EX", keyMutexExpireSec) == null) {
+                //休眠的具体时间必要根据实际的情况做调整
+                //目前暂定300毫秒不会影响到客户体验
+                try {
+                    Thread.sleep(sleepMilliseconds);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                //System.out.println(2); //debug
+                continue;
+            }
+            try
+            {
+                //保存到对应的时间戳资源数据集合当中
+
+                String saveAllKeySetName="SaveAllKeySet:"+timestampKeyValue;
+                sadd(saveAllKeySetName,key);
+                //获取需要缓存的数据-从数据库或其他的地方查询
+                T result = executor.execute();
+                if (result == null) {
+                    setCachedWrapper(key, nullValueExpireSec, null);
+                } else {
+                    setCachedWrapper(key, keyExpireSec, result);
+                }
+                //System.out.println(3); //debug
+                value = new CachedWrapper<T>(result);
+                return value;
+            }
+            finally
+            {
+                del(key_mutex);
+            }
+        }
     }
 }
