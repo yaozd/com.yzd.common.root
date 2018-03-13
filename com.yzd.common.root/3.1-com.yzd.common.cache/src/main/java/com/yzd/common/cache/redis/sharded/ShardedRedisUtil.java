@@ -506,6 +506,8 @@ public class ShardedRedisUtil {
      * @param nullValueExpireSec
      * @param keyMutexExpireSec
      * @param sleepMilliseconds
+     * @param ExpireAllKeySet 保证所有的SaveAllKeySet都设置了过期时间
+     * @param prefixSaveAllKeySet 保存资源时间戳版本对应的所有缓存
      * @param executor
      * @return
      */
@@ -514,6 +516,8 @@ public class ShardedRedisUtil {
                                                            final int nullValueExpireSec,
                                                            final int keyMutexExpireSec,
                                                            final int sleepMilliseconds,
+                                                           final String ExpireAllKeySet ,
+                                                           final String prefixSaveAllKeySet ,
                                                            CachedWrapperExecutor<String> executor)  {
         if (StringUtils.isBlank(key)) {
             throw new IllegalStateException("key值不能为空。");
@@ -529,6 +533,12 @@ public class ShardedRedisUtil {
         }
         if (sleepMilliseconds > 2000) {
             throw new IllegalStateException("循环请求sleep休眠时间必须小于2000毫秒。");
+        }
+        if (StringUtils.isBlank(ExpireAllKeySet)) {
+            throw new IllegalStateException("ExpireAllKeySet值不能为空。");
+        }
+        if (StringUtils.isBlank(prefixSaveAllKeySet)) {
+            throw new IllegalStateException("prefixSaveAllKeySet值不能为空。");
         }
         CachedWrapper<String> value;
         String key_mutex = "mutexKey_" + key;
@@ -558,14 +568,13 @@ public class ShardedRedisUtil {
             {
                 //获取需要缓存的数据-从数据库或其他的地方查询
                 String result = executor.execute();
-                String saveAllKeySetName="SaveAllKeySet:"+result;
-                String expireAllKeySet="ExpireAllKeySet";
-                sadd(expireAllKeySet,saveAllKeySetName);
+                String saveAllKeySetName=prefixSaveAllKeySet+result;
+                sadd(ExpireAllKeySet,saveAllKeySetName);
                 //初始创建时间
                 SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
                 sadd(saveAllKeySetName,"##INIT-TIME##="+df.format(new Date()));
                 expire(saveAllKeySetName,10000);
-                srem(expireAllKeySet,saveAllKeySetName);
+                srem(ExpireAllKeySet,saveAllKeySetName);
 
                 if (result == null) {
                     setCachedWrapper(key, nullValueExpireSec, null);
@@ -582,11 +591,11 @@ public class ShardedRedisUtil {
             }
         }
     }
-    public <T> CachedWrapper<T> getPublicCachedWrapperByTimestampKeyValue(CachedSetting cachedSetting, String where,String timestampKeyValue, CachedWrapperExecutor<T> executor) {
+    public <T> CachedWrapper<T> getPublicCachedWrapperByTimestampKeyValue(CachedSetting cachedSetting, String where,String saveAllKeySetName, CachedWrapperExecutor<T> executor) {
         //cachedSetting.getVersion() 代指缓存数据结构的版本号。当数据结构发生变化时版本号也会更改
         String whereFullVal = cachedSetting.getVersion() + "|" + where;
         String key = cachedSetting.getKeyFullName() + CachedKeyUtil.KeyMd5(whereFullVal);
-        return this.getCachedWrapperByTimestampKeyValue(key, cachedSetting.getKeyExpireSec(), cachedSetting.getNullValueExpireSec(), cachedSetting.getKeyMutexExpireSec(), cachedSetting.getSleepMilliseconds(),timestampKeyValue, executor);
+        return this.getCachedWrapperByTimestampKeyValue(key, cachedSetting.getKeyExpireSec(), cachedSetting.getNullValueExpireSec(), cachedSetting.getKeyMutexExpireSec(), cachedSetting.getSleepMilliseconds(),saveAllKeySetName, executor);
     }
 
     /**
@@ -598,7 +607,7 @@ public class ShardedRedisUtil {
      * @param nullValueExpireSec
      * @param keyMutexExpireSec
      * @param sleepMilliseconds
-     * @param timestampKeyValue
+     * @param saveAllKeySetName 保存资源时间戳版本对应的所有缓存
      * @param executor
      * @param <T>
      * @return
@@ -608,7 +617,7 @@ public class ShardedRedisUtil {
                                                                     final int nullValueExpireSec,
                                                                     final int keyMutexExpireSec,
                                                                     final int sleepMilliseconds,
-                                                                    final String timestampKeyValue,
+                                                                    final String saveAllKeySetName,
                                                                     CachedWrapperExecutor<T> executor) {
         if (StringUtils.isBlank(key)) {
             throw new IllegalStateException("key值不能为空。");
@@ -625,8 +634,8 @@ public class ShardedRedisUtil {
         if (sleepMilliseconds > 2000) {
             throw new IllegalStateException("循环请求sleep休眠时间必须小于2000毫秒。");
         }
-        if (StringUtils.isBlank(timestampKeyValue)) {
-            throw new IllegalStateException("缓存资源版本的时间戳timestampKeyValue值不能为空。");
+        if (StringUtils.isBlank(saveAllKeySetName)) {
+            throw new IllegalStateException("保存资源时间戳版本对应的所有缓存saveAllKeySetName值不能为空。");
         }
         CachedWrapper<T> value;
         String key_mutex = "mutexKey_" + key;
@@ -655,8 +664,6 @@ public class ShardedRedisUtil {
             try
             {
                 //保存到对应的时间戳资源数据集合当中
-
-                String saveAllKeySetName="SaveAllKeySet:"+timestampKeyValue;
                 sadd(saveAllKeySetName,key);
                 //获取需要缓存的数据-从数据库或其他的地方查询
                 T result = executor.execute();
