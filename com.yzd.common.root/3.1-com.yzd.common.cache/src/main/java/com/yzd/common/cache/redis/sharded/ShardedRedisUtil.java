@@ -496,11 +496,24 @@ public class ShardedRedisUtil {
             }
         });
     }
-
+    /**
+     * 获取剩余时间（秒）
+     * @param key
+     * @return
+     */
+    public  Long Ttl(String key){
+        return execute(key, new ShardedRedisExecutor<Long>() {
+            @Override
+            public Long execute(ShardedJedis jedis) {
+                return jedis.ttl(key);
+            }
+        });
+    }
     /**
      * 2018-03-13-1218
      * 定制方法，特用于com.yzd.cancal,缓存更新组件
      * 作用：获得缓存资源的时间戳版本号
+     * 理论上：Timestamp与SaveAllKeySet的超时时间应该是相同的。相当于timestampKeyExpireSec等于prefixSaveAllKeySetExpireSecr的时间
      * @param key
      * @param keyExpireSec
      * @param nullValueExpireSec
@@ -508,6 +521,7 @@ public class ShardedRedisUtil {
      * @param sleepMilliseconds
      * @param ExpireAllKeySet 保证所有的SaveAllKeySet都设置了过期时间
      * @param prefixSaveAllKeySet 保存资源时间戳版本对应的所有缓存
+     * @param prefixSaveAllKeySetExpireSec 保存资源时间戳版本对应的所有缓存的过期时间
      * @param executor
      * @return
      */
@@ -518,6 +532,7 @@ public class ShardedRedisUtil {
                                                            final int sleepMilliseconds,
                                                            final String ExpireAllKeySet ,
                                                            final String prefixSaveAllKeySet ,
+                                                           final int prefixSaveAllKeySetExpireSec,
                                                            CachedWrapperExecutor<String> executor)  {
         if (StringUtils.isBlank(key)) {
             throw new IllegalStateException("key值不能为空。");
@@ -539,6 +554,9 @@ public class ShardedRedisUtil {
         }
         if (StringUtils.isBlank(prefixSaveAllKeySet)) {
             throw new IllegalStateException("prefixSaveAllKeySet值不能为空。");
+        }
+        if (prefixSaveAllKeySetExpireSec < 1) {
+            throw new IllegalStateException("prefixSaveAllKeySet的过期时间必须大于1秒。");
         }
         CachedWrapper<String> value;
         String key_mutex = "mutexKey_" + key;
@@ -573,7 +591,7 @@ public class ShardedRedisUtil {
                 //初始创建时间
                 SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
                 sadd(saveAllKeySetName,"##INIT-TIME##="+df.format(new Date()));
-                expire(saveAllKeySetName,10000);
+                expire(saveAllKeySetName,prefixSaveAllKeySetExpireSec);
                 srem(ExpireAllKeySet,saveAllKeySetName);
 
                 if (result == null) {
@@ -591,11 +609,11 @@ public class ShardedRedisUtil {
             }
         }
     }
-    public <T> CachedWrapper<T> getPublicCachedWrapperByTimestampKeyValue(CachedSetting cachedSetting, String where,String saveAllKeySetName, CachedWrapperExecutor<T> executor) {
+    public <T> CachedWrapper<T> getPublicCachedWrapperByTimestampKeyValue(CachedSetting cachedSetting, String where,String timestampKeyName,String saveAllKeySetName, CachedWrapperExecutor<T> executor) {
         //cachedSetting.getVersion() 代指缓存数据结构的版本号。当数据结构发生变化时版本号也会更改
         String whereFullVal = cachedSetting.getVersion() + "|" + where;
         String key = cachedSetting.getKeyFullName() + CachedKeyUtil.KeyMd5(whereFullVal);
-        return this.getCachedWrapperByTimestampKeyValue(key, cachedSetting.getKeyExpireSec(), cachedSetting.getNullValueExpireSec(), cachedSetting.getKeyMutexExpireSec(), cachedSetting.getSleepMilliseconds(),saveAllKeySetName, executor);
+        return this.getCachedWrapperByTimestampKeyValue(key, cachedSetting.getKeyExpireSec(), cachedSetting.getNullValueExpireSec(), cachedSetting.getKeyMutexExpireSec(), cachedSetting.getSleepMilliseconds(),timestampKeyName,saveAllKeySetName, executor);
     }
 
     /**
@@ -607,6 +625,7 @@ public class ShardedRedisUtil {
      * @param nullValueExpireSec
      * @param keyMutexExpireSec
      * @param sleepMilliseconds
+     * @param timestampKeyName 资源时间戳版本缓存KEY的名称
      * @param saveAllKeySetName 保存资源时间戳版本对应的所有缓存
      * @param executor
      * @param <T>
@@ -617,6 +636,7 @@ public class ShardedRedisUtil {
                                                                     final int nullValueExpireSec,
                                                                     final int keyMutexExpireSec,
                                                                     final int sleepMilliseconds,
+                                                                    final String timestampKeyName,
                                                                     final String saveAllKeySetName,
                                                                     CachedWrapperExecutor<T> executor) {
         if (StringUtils.isBlank(key)) {
@@ -663,14 +683,27 @@ public class ShardedRedisUtil {
             }
             try
             {
-                //保存到对应的时间戳资源数据集合当中
-                sadd(saveAllKeySetName,key);
+                //timestampTtl剩余时间（秒）
+                Long timestampTtl=Ttl(timestampKeyName);
+                //timestampTtl=-1 代表永久缓存
+                if(timestampTtl==-1){
+                    throw new IllegalStateException("当前资源时间戳版本："+timestampKeyName+",没有设置过期时间");
+                }
                 //获取需要缓存的数据-从数据库或其他的地方查询
                 T result = executor.execute();
+                //timestampTtl=-2 代表没有找到应的KEY
+                if(timestampTtl==-2){
+                    return  new CachedWrapper<T>(result);
+                }
+                //保存到对应的时间戳资源数据集合当中
+                sadd(saveAllKeySetName,key);
+                //暂时取keyExpireSec过期时间 与 timestampTtl剩余时间（秒）中最小的值
+                //todo 理论上讲keyExpireSec过期时间应该等于timestampTtl剩余时间（秒）；
+                int expireSec=Math.min(keyExpireSec,timestampTtl.intValue());
                 if (result == null) {
                     setCachedWrapper(key, nullValueExpireSec, null);
                 } else {
-                    setCachedWrapper(key, keyExpireSec, result);
+                    setCachedWrapper(key, expireSec, result);
                 }
                 //System.out.println(3); //debug
                 value = new CachedWrapper<T>(result);

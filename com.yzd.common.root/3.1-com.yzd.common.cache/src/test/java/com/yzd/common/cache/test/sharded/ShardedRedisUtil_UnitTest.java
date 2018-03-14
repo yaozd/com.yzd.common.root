@@ -69,4 +69,12 @@ public class ShardedRedisUtil_UnitTest {
         redisUtil.sadd("set.test","1");
         redisUtil.expire("set.test",100);
     }
+    @Test
+    public void ttl_Test(){
+        String key="P01.SaveAllKeySet:1deywjfe8jr41";
+        ShardedRedisUtil redisUtil = ShardedRedisUtil.getInstance();
+        Long t1=redisUtil.Ttl(key);
+        if(t1==-2)
+        System.out.println(t1);
+    }
 }
