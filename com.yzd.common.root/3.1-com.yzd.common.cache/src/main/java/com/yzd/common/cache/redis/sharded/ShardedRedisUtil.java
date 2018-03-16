@@ -497,6 +497,23 @@ public class ShardedRedisUtil {
         });
     }
     /**
+     * 返回集合中一个或多个随机数
+     * <li>当count大于set的长度时，set所有值返回，不会抛错。</li>
+     * <li>当count等于0时，返回[]</li>
+     * <li>当count小于0时，也能返回。如-1返回一个，-2返回两个</li>
+     * @param key
+     * @param count
+     * @return List<String>
+     */
+    public List<String> srandMember(String key, int count) {
+        return execute(key, new ShardedRedisExecutor<List<String>>() {
+            @Override
+            public List<String> execute(ShardedJedis jedis) {
+                return jedis.srandmember(key, count);
+            }
+        });
+    }
+    /**
      * 获取剩余时间（秒）
      * @param key
      * @return
