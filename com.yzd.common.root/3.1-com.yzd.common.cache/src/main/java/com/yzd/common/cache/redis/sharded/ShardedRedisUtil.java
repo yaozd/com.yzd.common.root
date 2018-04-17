@@ -465,6 +465,26 @@ public class ShardedRedisUtil {
         });
     }
     /**
+     * 向集合添加一个或多个成员，返回添加成功的数量
+     * @param key
+     * @param itemList
+     * @return Long
+     */
+    public  Long sadd(final String key, List<String> itemList){
+        if(itemList==null||itemList.isEmpty()) {
+            return 0L;
+        }
+        String[] value = new String[itemList.size()];
+        itemList.toArray(value);
+        return execute(key, new ShardedRedisExecutor<Long>() {
+            @Override
+            public Long execute(ShardedJedis jedis) {
+                Long length = jedis.sadd(key, value);
+                return length;
+            }
+        });
+    }
+    /**
      * 移除并返回集合中的一个随机元素
      * <li>当set为空或者不存在时，返回Null</li>
      * @param key

@@ -9,7 +9,9 @@ import org.junit.Test;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -76,5 +78,14 @@ public class ShardedRedisUtil_UnitTest {
         Long t1=redisUtil.Ttl(key);
         if(t1==-2)
         System.out.println(t1);
+    }
+    @Test
+    public void sadd_Test(){
+        List<String> itemList=new ArrayList<>();
+        itemList.add("ccc");
+        itemList.add("ddd");
+        ShardedRedisUtil redisUtil = ShardedRedisUtil.getInstance();
+        Long count= redisUtil.sadd("saddlistkey",itemList);
+        System.out.println(count);
     }
 }
