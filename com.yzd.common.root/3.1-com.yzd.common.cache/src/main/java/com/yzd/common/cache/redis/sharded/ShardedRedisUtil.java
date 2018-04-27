@@ -1,8 +1,10 @@
 package com.yzd.common.cache.redis.sharded;
 
 import com.yzd.common.cache.utils.fastjson.FastJsonUtil;
+import com.yzd.common.cache.utils.loadBalanceExt.CacheRandomNum;
 import com.yzd.common.cache.utils.setting.CachedKeyUtil;
 import com.yzd.common.cache.utils.setting.CachedSetting;
+import com.yzd.common.cache.utils.setting.CachedSettingForTVCB;
 import com.yzd.common.cache.utils.wrapper.CachedWrapper;
 import com.yzd.common.cache.utils.wrapper.CachedWrapperExecutor;
 import org.apache.commons.lang.StringUtils;
@@ -734,6 +736,146 @@ public class ShardedRedisUtil {
                 }
                 //保存到对应的时间戳资源数据集合当中
                 sadd(saveAllKeySetName,key);
+                //暂时取keyExpireSec过期时间 与 timestampTtl剩余时间（秒）中最小的值
+                //todo 理论上讲keyExpireSec过期时间应该等于timestampTtl剩余时间（秒）；
+                int expireSec=Math.min(keyExpireSec,timestampTtl.intValue());
+                if (result == null) {
+                    setCachedWrapper(key, nullValueExpireSec, null);
+                } else {
+                    setCachedWrapper(key, expireSec, result);
+                }
+                //System.out.println(3); //debug
+                value = new CachedWrapper<T>(result);
+                return value;
+            }
+            finally
+            {
+                del(key_mutex);
+            }
+        }
+    }
+
+    public String getCachedDataForTVCB(CachedSettingForTVCB cachedSetting, String where, String keyNameForTimestamp, String keyNameForSaveAllKeySet, CachedWrapperExecutor<String> executor) {
+        //[cachedSetting.getVersion()]代指缓存数据结构的版本号。当数据结构发生变化时版本号也会更改
+        String whereFullVal = "|" +cachedSetting.getVersion() + "|" + where;
+        String whereMD5=CachedKeyUtil.KeyMd5(whereFullVal);
+        String keyFullName=CachedKeyUtil.getKeyFullName(cachedSetting.getProjectNo(),cachedSetting.getKeyName(),whereMD5);
+        Long currentNumForCopyData= CacheRandomNum.getRandomNum(keyNameForTimestamp,cachedSetting.getCountForCopyData());
+        if(currentNumForCopyData==0){
+            CachedWrapper<String> dataInRedisByZero=getCachedWrapperForTVCB(
+                    keyFullName,
+                    cachedSetting.getKeyExpireSec(),
+                    cachedSetting.getKeyExpireSecForNullValue(),
+                    cachedSetting.getKeyExpireSecForMutexKey(),
+                    cachedSetting.getSleepMillisecondsForMutexKey(),
+                    keyNameForTimestamp,
+                    keyNameForSaveAllKeySet,
+                    cachedSetting.getCountForCopyData(),
+                    executor);
+           return dataInRedisByZero.getData();
+        }
+        return getDataInRedisForTVCB(
+                keyFullName,
+                currentNumForCopyData,
+                cachedSetting,
+                keyNameForTimestamp,
+                keyNameForSaveAllKeySet,
+                executor);
+    }
+    private String getDataInRedisForTVCB(String keyFullName,Long currentNumForCopyData,CachedSettingForTVCB cachedSetting, String keyNameForTimestamp, String keyNameForSaveAllKeySet, CachedWrapperExecutor<String> executor) {
+        String keyFullNameForCopyData=CachedKeyUtil.getKeyFullNameForCopyData(keyFullName,currentNumForCopyData);
+        String dataInRedis=get(keyFullNameForCopyData);
+        if(dataInRedis!=null){
+            return dataInRedis;
+        }
+        CachedWrapper<String> dataInRedisByZero=getCachedWrapperForTVCB(
+                keyFullName,
+                cachedSetting.getKeyExpireSec(),
+                cachedSetting.getKeyExpireSecForNullValue(),
+                cachedSetting.getKeyExpireSecForMutexKey(),
+                cachedSetting.getSleepMillisecondsForMutexKey(),
+                keyNameForTimestamp,
+                keyNameForSaveAllKeySet,
+                cachedSetting.getCountForCopyData(),
+                executor);
+        Long t1=Ttl(keyFullName);
+        t1=t1<1?1:t1;
+        String result=dataInRedisByZero.getData();
+        setex(keyFullNameForCopyData,t1.intValue(),result);
+        return result;
+    }
+    private <T> CachedWrapper<T> getCachedWrapperForTVCB(final String key,
+                                                         final int keyExpireSec,
+                                                         final int nullValueExpireSec,
+                                                         final int keyMutexExpireSec,
+                                                         final int sleepMilliseconds,
+                                                         final String timestampKeyName,
+                                                         final String saveAllKeySetName,
+                                                         final int countForCopyData,
+                                                         CachedWrapperExecutor<T> executor) {
+        if (StringUtils.isBlank(key)) {
+            throw new IllegalStateException("key值不能为空。");
+        }
+        if (keyExpireSec < nullValueExpireSec) {
+            throw new IllegalStateException("key的过期时间必须大于查询结果为NULL值时的过期时间。");
+        }
+        if (keyExpireSec < keyMutexExpireSec) {
+            throw new IllegalStateException("key的过期时间必须大于互斥key的过期时间。");
+        }
+        if (keyMutexExpireSec > 10) {
+            throw new IllegalStateException("互斥key的过期时间必须小于10秒。");
+        }
+        if (sleepMilliseconds > 2000) {
+            throw new IllegalStateException("循环请求sleep休眠时间必须小于2000毫秒。");
+        }
+        if (StringUtils.isBlank(saveAllKeySetName)) {
+            throw new IllegalStateException("保存资源时间戳版本对应的所有缓存saveAllKeySetName值不能为空。");
+        }
+        CachedWrapper<T> value;
+        String key_mutex = "mutexKey_" + key;
+        //不需要对数据进行缓存
+        if (keyExpireSec == 0 && nullValueExpireSec == 0 && keyMutexExpireSec == 0) {
+            //获取需要缓存的数据-从数据库或其他的地方查询
+            T result = executor.execute();
+            value = new CachedWrapper<T>(result);
+            return value;
+        }
+        while (true) {
+            value = getCachedWrapper(key);
+            //System.out.println(1); //debug
+            if (value != null) return value;
+            if (set(key_mutex, "1", "NX", "EX", keyMutexExpireSec) == null) {
+                //休眠的具体时间必要根据实际的情况做调整
+                //目前暂定300毫秒不会影响到客户体验
+                try {
+                    Thread.sleep(sleepMilliseconds);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                //System.out.println(2); //debug
+                continue;
+            }
+            try
+            {
+                //timestampTtl剩余时间（秒）
+                Long timestampTtl=Ttl(timestampKeyName);
+                //timestampTtl=-1 代表永久缓存
+                if(timestampTtl==-1){
+                    throw new IllegalStateException("当前资源时间戳版本："+timestampKeyName+",没有设置过期时间");
+                }
+                //获取需要缓存的数据-从数据库或其他的地方查询
+                T result = executor.execute();
+                //timestampTtl=-2 代表没有找到应的KEY
+                if(timestampTtl==-2){
+                    return  new CachedWrapper<T>(result);
+                }
+                //保存到对应的时间戳资源数据集合当中-包含所有副本的KEY：key1,key1_1;key1_2;
+                List<String>keyListWithCopyKey=new ArrayList<>();
+                keyListWithCopyKey.add(key);
+                for (int i = 1; i <countForCopyData ; i++) {
+                    keyListWithCopyKey.add(key+"_"+i);
+                }
+                sadd(saveAllKeySetName,keyListWithCopyKey);
                 //暂时取keyExpireSec过期时间 与 timestampTtl剩余时间（秒）中最小的值
                 //todo 理论上讲keyExpireSec过期时间应该等于timestampTtl剩余时间（秒）；
                 int expireSec=Math.min(keyExpireSec,timestampTtl.intValue());

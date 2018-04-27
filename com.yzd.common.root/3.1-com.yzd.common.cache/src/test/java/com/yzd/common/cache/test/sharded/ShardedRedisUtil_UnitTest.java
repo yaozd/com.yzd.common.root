@@ -88,4 +88,27 @@ public class ShardedRedisUtil_UnitTest {
         Long count= redisUtil.sadd("saddlistkey",itemList);
         System.out.println(count);
     }
+    @Test
+    public void getTimestampKey_Test(){
+        String keyNameForTimestamp="P01.Timestamp:publicNormal";//时间戳版本key的名称
+        String keyNameForExpireAllKeySet="P01.ExpireAllKeySet";//保证所有的SaveAllKeySet都设置了过期时间
+        String keyNameForSaveAllKeySet="P01.SaveAllKeySet:";//保存资源时间戳版本对应的所有缓存
+        int timeoutForPublicKey=1000;
+        ShardedRedisUtil redisUtil = ShardedRedisUtil.getInstance();
+        CachedWrapper<String> wrapperValue_keyTimestamp = redisUtil.getTimestampKey(keyNameForTimestamp,
+                timeoutForPublicKey,
+                5,
+                3,
+                300,
+                keyNameForExpireAllKeySet,
+                keyNameForSaveAllKeySet,
+                timeoutForPublicKey,
+                new CachedWrapperExecutor<String>() {
+                    @Override
+                    public String execute() {
+                        //通过twitter的snowflake算法解决数据时间戳重复问题
+                        return "123456" ;
+                    }
+                });
+    }
 }

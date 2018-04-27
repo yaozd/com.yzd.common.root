@@ -18,4 +18,16 @@ public class CachedKeyUtil {
         String val= FastJsonUtil.serialize(object);
         return val;
     }
+    public static String getKeyFullName(String projectNo,String keyName,String whereMD5){
+        return projectNo+"."+keyName+":"+whereMD5;
+    }
+    public static String getKeyFullNameForCopyData(String keyName,Long num){
+        return keyName+"_"+String.valueOf(num);
+    }
+    public static String getKeyFullNameForMutexKey(){
+        return "";
+    }
+    public static String getKeyFullNameForTimestamp(){
+        return "";
+    }
 }
