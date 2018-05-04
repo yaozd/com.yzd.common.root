@@ -5,6 +5,9 @@ package com.yzd.common.cache.utils.setting;
  * Created by Administrator on 2017/1/17.
  */
 public class CachedSetting {
+    public CachedSetting(){
+
+    }
     public CachedSetting(String projectNo,String key,int keyExpireSec,String desc){
         this.setProjectNo(projectNo);
         this.setKey(key);

@@ -39,7 +39,7 @@ public class CachedDataForTVCB_UnitTest {
                         return "123456" ;
                     }
                 });
-        String keyTimestamp=wrapperValue_keyTimestamp.getData();
+        String keyTimestampValue=wrapperValue_keyTimestamp.getData();
         //step-03 通过时间戳版本+缓存数据的副本的数量->设置缓存信息
         CachedSettingForTVCB cachedSettingForData = new CachedSettingForTVCB();
         cachedSettingForData
@@ -49,12 +49,12 @@ public class CachedDataForTVCB_UnitTest {
                 .setKeyExpireSecForNullValue(3)
                 .setKeyExpireSecForMutexKey(3)
                 .setSleepMillisecondsForMutexKey(300)
-                .setKeyNameForTimestamp("P01.Timestamp:publicNormal")
+                .setKeyNameForTimestamp(keyNameForTimestamp)
                 .setCountForCopyData(10)
                 .setVersion("1.0")
                 .setDesc("所有用户的信息");
-        String keyNameForSaveAllKeySetWithTimestamp=keyNameForSaveAllKeySet+keyTimestamp;
-        String result = redisUtil.getCachedDataForTVCB(cachedSettingForData, where, keyNameForTimestamp, keyNameForSaveAllKeySetWithTimestamp
+        String keyNameForSaveAllKeySetWithTimestamp=keyNameForSaveAllKeySet+keyTimestampValue;
+        String result = redisUtil.getCachedDataForTVCB(cachedSettingForData, where, keyNameForSaveAllKeySetWithTimestamp
                 , new CachedWrapperExecutor<String>() {
                     @Override
                     public String execute() {
@@ -63,6 +63,6 @@ public class CachedDataForTVCB_UnitTest {
                 });
         System.out.println(result);
         //step-04   json数据反序列化
-        FastJsonUtil.deserialize(result,String.class);
+        //FastJsonUtil.deserialize(result,String.class);
     }
 }

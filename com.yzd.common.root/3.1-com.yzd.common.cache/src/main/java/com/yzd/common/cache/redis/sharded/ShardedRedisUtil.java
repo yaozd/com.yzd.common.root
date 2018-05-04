@@ -755,11 +755,12 @@ public class ShardedRedisUtil {
         }
     }
 
-    public String getCachedDataForTVCB(CachedSettingForTVCB cachedSetting, String where, String keyNameForTimestamp, String keyNameForSaveAllKeySet, CachedWrapperExecutor<String> executor) {
+    public String getCachedDataForTVCB(CachedSettingForTVCB cachedSetting, String where , String keyNameForSaveAllKeySet, CachedWrapperExecutor<String> executor) {
         //[cachedSetting.getVersion()]代指缓存数据结构的版本号。当数据结构发生变化时版本号也会更改
         String whereFullVal = "|" +cachedSetting.getVersion() + "|" + where;
         String whereMD5=CachedKeyUtil.KeyMd5(whereFullVal);
         String keyFullName=CachedKeyUtil.getKeyFullName(cachedSetting.getProjectNo(),cachedSetting.getKeyName(),whereMD5);
+        String keyNameForTimestamp=cachedSetting.getKeyNameForTimestamp();
         Long currentNumForCopyData= CacheRandomNum.getRandomNum(keyNameForTimestamp,cachedSetting.getCountForCopyData());
         if(currentNumForCopyData==0){
             CachedWrapper<String> dataInRedisByZero=getCachedWrapperForTVCB(
@@ -778,12 +779,12 @@ public class ShardedRedisUtil {
                 keyFullName,
                 currentNumForCopyData,
                 cachedSetting,
-                keyNameForTimestamp,
                 keyNameForSaveAllKeySet,
                 executor);
     }
-    private String getDataInRedisForTVCB(String keyFullName,Long currentNumForCopyData,CachedSettingForTVCB cachedSetting, String keyNameForTimestamp, String keyNameForSaveAllKeySet, CachedWrapperExecutor<String> executor) {
+    private String getDataInRedisForTVCB(String keyFullName,Long currentNumForCopyData,CachedSettingForTVCB cachedSetting, String keyNameForSaveAllKeySet, CachedWrapperExecutor<String> executor) {
         String keyFullNameForCopyData=CachedKeyUtil.getKeyFullNameForCopyData(keyFullName,currentNumForCopyData);
+        String keyNameForTimestamp=cachedSetting.getKeyNameForTimestamp();
         String dataInRedis=get(keyFullNameForCopyData);
         if(dataInRedis!=null){
             return dataInRedis;
