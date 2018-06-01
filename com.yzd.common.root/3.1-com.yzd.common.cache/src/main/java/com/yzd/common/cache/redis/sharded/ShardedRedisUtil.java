@@ -15,10 +15,7 @@ import redis.clients.jedis.*;
 import redis.clients.util.Hashing;
 
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * 分片redis
@@ -240,7 +237,51 @@ public class ShardedRedisUtil {
             }
         });
     }
+    public Long zadd(final String key,double score,final String member) {
+        return execute(key, new ShardedRedisExecutor<Long>() {
+            @Override
+            public Long execute(ShardedJedis jedis) {
+                return jedis.zadd(key,score,member);
+            }
+        });
+    }
+    public Boolean zrem(final String key, final String value){
+        return execute(key, new ShardedRedisExecutor<Boolean>() {
+            @Override
+            public Boolean execute(ShardedJedis jedis) {
+                Long num = jedis.zrem(key, value);
+                if(num > 0){
+                    return true;
+                }
+                return false;
+            }
+        });
+    }
 
+    /***
+     * SortedSet 有序集
+     * 返回有序集 key 中，所有 score 值介于 min 和 max 之间(包括等于 min 或 max )的成员。
+     * @param key
+     * @param mixScore
+     * @param maxScore
+     * @return
+     */
+    public Set<String> zrangeByScore(final String key, double mixScore, double maxScore) {
+        return execute(key, new ShardedRedisExecutor<Set<String>>() {
+            @Override
+            public Set<String> execute(ShardedJedis jedis) {
+                return jedis.zrangeByScore(key,mixScore,maxScore);
+            }
+        });
+    }
+    public Double zscore(final String key,final String member) {
+        return execute(key, new ShardedRedisExecutor<Double>() {
+            @Override
+            public Double execute(ShardedJedis jedis) {
+                return jedis.zscore(key,member);
+            }
+        });
+    }
     public void destroy() {
         this.shardedJedisPool.close();
     }

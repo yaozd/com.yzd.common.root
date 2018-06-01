@@ -4,6 +4,8 @@ Redis操作字符串工具类封装：http://fanshuyao.iteye.com/blog/2326221
 Redis操作Hash工具类封装：http://fanshuyao.iteye.com/blog/2327134
 Redis操作List工具类封装：http://fanshuyao.iteye.com/blog/2327137
 Redis操作Set工具类封装：http://fanshuyao.iteye.com/blog/2327228
+Redis操作SortedSet工具类封装：https://blog.csdn.net/a1031397017/article/details/69484193
+java 操作Redis SortedSet 命令 实例（Jedis）：https://blog.csdn.net/a1031397017/article/details/69484193
 ```
 ### 2.KEY作用对应表
 KEY |类型|作用
