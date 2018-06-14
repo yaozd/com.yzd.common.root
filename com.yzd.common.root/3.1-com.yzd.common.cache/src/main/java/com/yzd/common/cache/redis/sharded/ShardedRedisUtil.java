@@ -2,6 +2,8 @@ package com.yzd.common.cache.redis.sharded;
 
 import com.yzd.common.cache.utils.fastjson.FastJsonUtil;
 import com.yzd.common.cache.utils.loadBalanceExt.CacheRandomNum;
+import com.yzd.common.cache.utils.lockExt.KeyLockUtil;
+import com.yzd.common.cache.utils.lockExt.ReaderToken;
 import com.yzd.common.cache.utils.setting.CachedKeyUtil;
 import com.yzd.common.cache.utils.setting.CachedSetting;
 import com.yzd.common.cache.utils.setting.CachedSettingForTVCB;
@@ -16,6 +18,7 @@ import redis.clients.util.Hashing;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 分片redis
@@ -932,6 +935,105 @@ public class ShardedRedisUtil {
             }
             finally
             {
+                del(key_mutex);
+            }
+        }
+    }
+    //=========================================================================================
+    /**
+     * step-01:通过setNX实现redis锁来减少对数据库的请求
+     * step-02:通过keyLock锁实现减少相同KEY对redis的写入锁的查询请求
+     * 建议getCachedWrapperByMutexKeyAndKeyLock用于对公共缓存资源，公共缓存资源存在并发高的情况。
+     * 个人缓存资源在没有黑客攻击的情况下，很少有并发的情况。
+     * 读取并设置数据缓存
+     * 通过互斥的锁来减少对数据库的访问
+     * 互斥的锁-使用的redis-setNX的方法
+     * 目前考虑的使用场景-缓存公共访问数据-更新机制-设置可容忍的过期时间
+     * @param key                key
+     * @param keyExpireSec       key的过期时间
+     * @param nullValueExpireSec 查询结果为NULL值时的过期时间
+     * @param keyMutexExpireSec  互斥key的过期时间(最大值为10秒,参考值为5秒)-互斥key的值取决于查询接口的响应时间
+     * @param sleepMilliseconds  循环请求中-休眠的具体时间必要根据实际的情况做调整-目前暂定300毫秒不会影响到客户体验
+     * @param executor           获取需要缓存的数据-从数据库或其他的地方查询
+     * @return
+     */
+    public <T> CachedWrapper<T> getCachedWrapperByMutexKeyAndKeyLock(final String key,
+                                                                     final int keyExpireSec,
+                                                                     final int nullValueExpireSec,
+                                                                     final int keyMutexExpireSec,
+                                                                     final int sleepMilliseconds,
+                                                                     CachedWrapperExecutor<T> executor)  {
+        if (StringUtils.isBlank(key)) throw new IllegalStateException("key值不能为空。");
+        if (keyExpireSec < nullValueExpireSec) throw new IllegalStateException("key的过期时间必须大于查询结果为NULL值时的过期时间。");
+        if (keyExpireSec < keyMutexExpireSec) throw new IllegalStateException("key的过期时间必须大于互斥key的过期时间。");
+        if (keyMutexExpireSec > 10) throw new IllegalStateException("互斥key的过期时间必须小于10秒。");
+        if (sleepMilliseconds > 2000) throw new IllegalStateException("循环请求sleep休眠时间必须小于2000毫秒。");
+        CachedWrapper<T> value;
+        String key_mutex = "mutexKey_" + key;
+        //不需要对数据进行缓存
+        if (keyExpireSec == 0 && nullValueExpireSec == 0 && keyMutexExpireSec == 0) {
+            //获取需要缓存的数据-从数据库或其他的地方查询
+            T result = executor.execute();
+            value = new CachedWrapper<T>(result);
+            return value;
+        }
+        value = getCachedWrapper(key);
+        if (value != null){ return value;}
+        System.out.println(key);
+        ReaderToken readerToken= KeyLockUtil.getInstance().getReaderToken(key);
+        long accessCount=readerToken.getAccessCount().getAndIncrement();
+        System.out.println(accessCount);
+        if(accessCount>0){
+            try {
+                //等待5秒，所以缓存数据从数据据中读取的时间最好小于5秒
+                readerToken.getDownLatch().await(5, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        while (true) {
+            value = getCachedWrapper(key);
+            if (value != null) {
+                //缓存数据添加完成后，释放keyLock锁。
+                if(readerToken!=null){
+                    readerToken.getDownLatch().countDown();
+                    KeyLockUtil.getInstance().remove(key);
+                }
+                return value;
+            }
+            System.out.println(key+"=====");
+            if (set(key_mutex, "1", "NX", "EX", keyMutexExpireSec) == null) {
+                //休眠的具体时间必要根据实际的情况做调整
+                //目前暂定300毫秒不会影响到客户体验
+                try {
+                    Thread.sleep(sleepMilliseconds);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                //System.out.println(2); //debug
+                continue;
+            }
+            try
+            {
+                //获取需要缓存的数据-从数据库或其他的地方查询
+                T result = executor.execute();
+                System.out.println(">>>>>T result = executor.execute();");
+                if (result == null) {
+                    setCachedWrapper(key, nullValueExpireSec, null);
+                } else {
+                    setCachedWrapper(key, keyExpireSec, result);
+                }
+                //System.out.println(3); //debug
+                value = new CachedWrapper<T>(result);
+                return value;
+            }
+            finally
+            {
+                //缓存数据添加完成后，释放keyLock锁。
+                if(readerToken!=null){
+                    readerToken.getDownLatch().countDown();
+                    KeyLockUtil.getInstance().remove(key);
+                }
                 del(key_mutex);
             }
         }
