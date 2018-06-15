@@ -987,6 +987,7 @@ public class ShardedRedisUtil {
             try {
                 //等待5秒，所以缓存数据从数据据中读取的时间最好小于5秒
                 readerToken.getDownLatch().await(5, TimeUnit.SECONDS);
+                System.out.println("==>>await");
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

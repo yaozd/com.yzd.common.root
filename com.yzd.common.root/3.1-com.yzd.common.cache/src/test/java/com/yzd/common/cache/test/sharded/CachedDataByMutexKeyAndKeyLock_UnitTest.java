@@ -1,5 +1,6 @@
 package com.yzd.common.cache.test.sharded;
 
+import cn.hutool.core.util.RandomUtil;
 import com.yzd.common.cache.redis.sharded.ShardedRedisUtil;
 import com.yzd.common.cache.test.cache.CacheKeyList;
 import com.yzd.common.cache.utils.lockExt.KeyLockUtil;
@@ -103,6 +104,52 @@ public class CachedDataByMutexKeyAndKeyLock_UnitTest {
 //                        }
                         return "cache data=getCachedWrapperByMutexKeyAndKeyLock_Thread";
                     });
+                };
+            }.start();
+        }
+        Thread.sleep(15000);
+    }
+    @Test
+    public void getCachedWrapperByMutexKeyAndKeyLock_Thread_Mutil_Key1() throws InterruptedException {
+        String key="P01.KeyLock_Thread:b0baee9d279d34fa1dfd71aadb908c3f";
+        for (Integer i = 0; i < 100000; i++) {
+            Integer t=i;
+            new Thread() {
+                public void run() {
+
+                };
+            }.start();
+        }
+        Thread.sleep(15000);
+    }
+    @Test
+    public void getCachedWrapperByMutexKeyAndKeyLock_Thread_Mutil_Key2() throws InterruptedException {
+        String key="P01.KeyLock_Thread:b0baee9d279d34fa1dfd71aadb908c3f";
+        for (Integer i = 0; i < 1000; i++) {
+
+            new Thread() {
+                public void run() {
+                    for (int j = 0; j <10000000 ; j++) {
+                        String newKey=key+j+ RandomUtil.randomNumbers(3);
+                        ShardedRedisUtil redisUtil = ShardedRedisUtil.getInstance();
+                        CachedWrapper<String> result = redisUtil.getCachedWrapperByMutexKeyAndKeyLock(newKey, 60 * 60 * 24, 5, 3,300,()->{
+                            return "cache data=getCachedWrapperByMutexKeyAndKeyLock_Thread";
+                        });
+                    }
+
+                };
+            }.start();
+        }
+        Thread.sleep(150000);
+    }
+    @Test
+    public void getCachedWrapperByMutexKeyAndKeyLock_Thread_Mutil_Key3() throws InterruptedException {
+        String key="P01.KeyLock_Thread:b0baee9d279d34fa1dfd71aadb908c3f";
+        for (Integer i = 0; i < 100000; i++) {
+            Integer t=i;
+            new Thread() {
+                public void run() {
+                    ReaderToken t= KeyLockUtil.getInstance().getReaderToken(key);
                 };
             }.start();
         }
