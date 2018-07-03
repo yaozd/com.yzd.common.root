@@ -259,7 +259,7 @@ public class ShardedRedisUtil {
     }
 
     /***
-     * SortedSet 有序集
+     * SortedSet 有序集 --递增
      * 返回有序集 key 中，所有 score 值介于 min 和 max 之间(包括等于 min 或 max )的成员。
      * @param key
      * @param mixScore
@@ -271,6 +271,119 @@ public class ShardedRedisUtil {
             @Override
             public Set<String> execute(ShardedJedis jedis) {
                 return jedis.zrangeByScore(key,mixScore,maxScore);
+            }
+        });
+    }
+    public Set<String> zrangeByScore(String key, double min, double max, int offset, int count) {
+        return execute(key, new ShardedRedisExecutor<Set<String>>() {
+            @Override
+            public Set<String> execute(ShardedJedis jedis) {
+                return jedis.zrangeByScore(key, min, max, offset, count);
+            }
+        });
+    }
+    public Set<Tuple> zrangeByScoreWithScores(String key, double min, double max) {
+        return execute(key, new ShardedRedisExecutor<Set<Tuple>>() {
+            @Override
+            public Set<Tuple> execute(ShardedJedis jedis) {
+                return jedis.zrangeByScoreWithScores(key, min, max);
+            }
+        });
+    }
+    public Set<Tuple> zrangeByScoreWithScores(String key, double min, double max, int offset, int count) {
+        return execute(key, new ShardedRedisExecutor<Set<Tuple>>() {
+            @Override
+            public Set<Tuple> execute(ShardedJedis jedis) {
+                return jedis.zrangeByScoreWithScores(key, min, max, offset, count);
+            }
+        });
+    }
+
+    /***
+     * SortedSet 有序集 --递减
+     * @param key
+     * @param mixScore
+     * @param maxScore
+     * @return
+     */
+    public Set<String> zrevrangeByScore(final String key, double mixScore, double maxScore) {
+        return execute(key, new ShardedRedisExecutor<Set<String>>() {
+            @Override
+            public Set<String> execute(ShardedJedis jedis) {
+                return jedis.zrevrangeByScore(key,mixScore,maxScore);
+            }
+        });
+    }
+    public Set<String> zrevrangeByScore(String key, double min, double max, int offset, int count) {
+        return execute(key, new ShardedRedisExecutor<Set<String>>() {
+            @Override
+            public Set<String> execute(ShardedJedis jedis) {
+                return jedis.zrevrangeByScore(key, min, max, offset, count);
+            }
+        });
+    }
+    public Set<Tuple> zrevrangeByScoreWithScores(String key, double min, double max) {
+        return execute(key, new ShardedRedisExecutor<Set<Tuple>>() {
+            @Override
+            public Set<Tuple> execute(ShardedJedis jedis) {
+                return jedis.zrevrangeByScoreWithScores(key, min, max);
+            }
+        });
+    }
+    public Set<Tuple> zrevrangeByScoreWithScores(String key, double min, double max, int offset, int count) {
+        return execute(key, new ShardedRedisExecutor<Set<Tuple>>() {
+            @Override
+            public Set<Tuple> execute(ShardedJedis jedis) {
+                return jedis.zrevrangeByScoreWithScores(key, min, max, offset, count);
+            }
+        });
+    }
+    /***
+     * //scores-递增 分数后10
+     * 其中成员的位置按 score 值递增(从小到大)来排序。 rev则相反
+     * @param key
+     * @param start
+     * @param end
+     * @return
+     */
+    public Set<String> zrange(final String key, long start, long end) {
+        return execute(key, new ShardedRedisExecutor<Set<String>>() {
+            @Override
+            public Set<String> execute(ShardedJedis jedis) {
+                return jedis.zrange(key,start,end);
+            }
+        });
+    }
+    public Set<Tuple> zrangeWithScores(final String key, long start, long end) {
+        return execute(key, new ShardedRedisExecutor<Set<Tuple>>() {
+            @Override
+            public Set<Tuple> execute(ShardedJedis jedis) {
+                return jedis.zrangeWithScores(key,start,end);
+            }
+        });
+    }
+
+    /***
+     * //scores-递减 分数前10
+     * 其中成员的位置按 score 值递减(从小到大)来排序
+     * @param key
+     * @param start
+     * @param end
+     * @return
+     */
+    public Set<String> zrevrange(final String key, long start, long end) {
+        return execute(key, new ShardedRedisExecutor<Set<String>>() {
+            @Override
+            public Set<String> execute(ShardedJedis jedis) {
+                return jedis.zrevrange(key,start,end);
+            }
+        });
+    }
+    public Set<Tuple> zrevrangeWithScores(final String key, long start, long end) {
+        return execute(key, new ShardedRedisExecutor<Set<Tuple>>() {
+            @Override
+            public Set<Tuple> execute(ShardedJedis jedis) {
+                return jedis.zrangeWithScores(key,start,end);
             }
         });
     }
