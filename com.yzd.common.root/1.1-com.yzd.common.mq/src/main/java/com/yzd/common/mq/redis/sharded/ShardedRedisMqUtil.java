@@ -922,4 +922,75 @@ public class ShardedRedisMqUtil {
             }
         });
     }
+    public Long zaddExt(final String key,double score,final String member) {
+        return execute(key, new ShardedRedisExecutor<Long>() {
+            @Override
+            public Long execute(ShardedJedis shardedJedis) {
+                if (StringUtils.isBlank(member)) {
+                    throw new IllegalStateException("[saddExt]的value参数不能为空");
+                }
+                String valueKey = member.trim();
+                Jedis j = (Jedis) shardedJedis.getShard(valueKey);
+                Long length = j.zadd(key,score,member);
+                return length;
+            }
+        });
+    }
+    public Boolean zremExt(final String key, final String member){
+        return execute(key, new ShardedRedisExecutor<Boolean>() {
+            @Override
+            public Boolean execute(ShardedJedis shardedJedis) {
+                if (StringUtils.isBlank(member)) {
+                    throw new IllegalStateException("[zremExt]的value参数不能为空");
+                }
+                String valueKey = member.trim();
+                Jedis j = (Jedis) shardedJedis.getShard(valueKey);
+                Long num = j.zrem(key, member);
+                if(num > 0){
+                    return true;
+                }
+                return false;
+            }
+        });
+    }
+    public Double zscoreExtByRedisUrl(String redisUrl,final String key,final String member) {
+        return execute(redisUrl,key, new ShardedJedisPoolExecutor<Double>() {
+            @Override
+            public Double execute(ShardedJedis shardedJedis) {
+                return shardedJedis.zscore(key,member);
+            }
+        });
+    }
+    public Long zaddExtByRedisUrl(String redisUrl,final String key,double score,final String member) {
+        return execute(redisUrl,key, new ShardedJedisPoolExecutor<Long>() {
+            @Override
+            public Long execute(ShardedJedis jedis) {
+                return jedis.zadd(key,score,member);
+            }
+        });
+    }
+    public Set<String> zrangeByScoreByRedisUrl(String redisUrl,String key, double min, double max, int offset, int count) {
+        return execute(redisUrl,key, new ShardedJedisPoolExecutor<Set<String>>() {
+            @Override
+            public Set<String> execute(ShardedJedis jedis) {
+                return jedis.zrangeByScore(key, min, max, offset, count);
+            }
+        });
+    }
+    public Set<Tuple> zrangeByScoreWithScoresByRedisUrl(String redisUrl,String key, double min, double max, int offset, int count) {
+        return execute(redisUrl,key, new ShardedJedisPoolExecutor<Set<Tuple>>() {
+            @Override
+            public Set<Tuple> execute(ShardedJedis jedis) {
+                return jedis.zrangeByScoreWithScores(key, min, max, offset, count);
+            }
+        });
+    }
+    public Long zcountExtByRedisUrl(String redisUrl,final String key,double min, double max) {
+        return execute(redisUrl,key, new ShardedJedisPoolExecutor<Long>() {
+            @Override
+            public Long execute(ShardedJedis shardedJedis) {
+                return shardedJedis.zcount(key,min, max);
+            }
+        });
+    }
 }

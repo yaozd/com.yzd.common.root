@@ -2,6 +2,7 @@ package com.yzd.common.mq.redis.job.writer;
 
 import com.yzd.common.mq.redis.job.enumExt.JobEnum;
 import com.yzd.common.mq.redis.sharded.ShardedRedisMqUtil;
+import com.yzd.common.mq.redis.utils.TimestampUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,6 +22,8 @@ public class RedisJobWriterUtil {
         long countOfsadd = redisUtil.saddExt(keyEnum.getSetName(), val);
         //判断当前消息是否存在-如果当前消息不存在，则插入到list消息队列中
         if (countOfsadd == 1){
+            //插入任务的创建时间
+            redisUtil.zaddExt(keyEnum.getCreateTimeName(), TimestampUtil.dateToTimestamp(),val);
             //常规操作-从尾部插入
             Long result = redisUtil.rpushExt(keyEnum.getListName(), val);
             if(logger.isDebugEnabled()){

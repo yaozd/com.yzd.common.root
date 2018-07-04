@@ -43,4 +43,8 @@ public enum  JobLockEnum implements JobEnum {
     public String getCheckTmpName(){
         return "jobCheckTmp-"+name;
     }
+    @Override
+    public String getCreateTimeName() {
+        return "jobCTime-"+name;
+    }
 }

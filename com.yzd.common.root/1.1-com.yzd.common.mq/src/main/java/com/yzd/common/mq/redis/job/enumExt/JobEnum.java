@@ -18,4 +18,6 @@ public interface JobEnum {
     String getTokenBucketName();
     //检查时临时存储
     String getCheckTmpName();
+    //存储任务创建时间
+    String getCreateTimeName();
 }

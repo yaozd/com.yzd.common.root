@@ -17,3 +17,14 @@ P01.Timestamp:userId:1000| String| 私有资源时间戳版本
 P01.UserBaseInfo.1000:1520ben35yo3y:XX| String| 私有资源缓存KEY的名称
 P01.Timestamp:publicNormal| String| 公有资源时间戳版本
 P01.Other1SelectAll:1dben35yo3y8:XX| String| 公有资源缓存KEY的名称
+### 3.Redis删除所有Key
+```
+删除所有Key
+删除所有Key，可以使用Redis的flushdb和flushall命令
+//删除当前数据库中的所有Key
+flushdb
+//删除所有数据库中的key
+flushall
+注：keys 指令可以进行模糊匹配，但如果 Key 含空格，就匹配不到了，暂时还没发现好的解决办法。
+http://ssuupv.blog.163.com/blog/static/1461567220135610456193/
+```

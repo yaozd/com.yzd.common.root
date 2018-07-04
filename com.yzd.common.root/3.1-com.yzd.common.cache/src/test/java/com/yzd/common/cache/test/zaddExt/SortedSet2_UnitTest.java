@@ -11,7 +11,7 @@ public class SortedSet2_UnitTest {
     @Test
     public void autoCreateTestData() {
         ShardedRedisUtil redisUtil = ShardedRedisUtil.getInstance();
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 10000000; i++) {
             redisUtil.zadd("sortedSet", Math.random() * 100, "value:" + i);
         }
     }
