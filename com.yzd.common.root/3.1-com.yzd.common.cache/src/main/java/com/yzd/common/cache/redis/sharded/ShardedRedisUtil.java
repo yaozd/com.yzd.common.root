@@ -62,6 +62,15 @@ public class ShardedRedisUtil {
         poolConfig.setMaxIdle(maxIdle);
         poolConfig.setMinIdle(minIdle);
         poolConfig.setMaxWaitMillis(maxWaitMillis);
+        //---BEGIN
+        //参考：
+        //【唯实践】JVM老生代增长过快问题排查
+        //https://mp.weixin.qq.com/s/6cJ5JuEgEWmMBzJFBDsSMg
+        //解决：老生代突然在上线后以有了明显的增长，而且是持续的增长
+        //目前没有对此设置进行验证-byArvin(2018-09-03-1710)
+        poolConfig.setMinEvictableIdleTimeMillis(-1);
+        poolConfig.setSoftMinEvictableIdleTimeMillis(60000);
+        //---END
         poolConfig.setTestOnBorrow(testOnBorrow);
 
         // 取得redis的url
