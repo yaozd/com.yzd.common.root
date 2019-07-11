@@ -17,7 +17,13 @@ public class PublicCached_UnitTest
         Long number=1L;
         //
         String dataInRedis=getDataInRedis(key, number);
+        System.out.println(dataInRedis);
         //
+        String result=FastJsonUtil.serialize(dataInRedis);
+        System.out.println(result);
+        //
+        FastJsonUtil.deserialize(result,String.class);
+        //dataInRedis是非标准Json格式，所以会报异常，（!=0）转化为（"!=0"）
         FastJsonUtil.deserialize(dataInRedis,String.class);
     }
     //STEP-02
