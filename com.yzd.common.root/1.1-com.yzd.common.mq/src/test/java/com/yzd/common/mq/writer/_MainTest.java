@@ -25,7 +25,7 @@ public class _MainTest {
      * 消息队列-写入消息
      */
     @Test
-    @PerfTest(threads = 100,invocations=10)
+    @PerfTest(threads = 500,invocations=10)
     public void writerExample(){
 
         for (int i = 0; i < 10000000; i++) {
@@ -33,7 +33,15 @@ public class _MainTest {
             RedisJobWriterUtil.write(keyEnum,val);
         }
     }
+    @Test
+    @PerfTest(threads = 500,invocations=10)
+    public void writerExample2(){
 
+        for (int i = 0; i < 100; i++) {
+            String val="id="+i;
+            RedisJobWriterUtil.write(keyEnum,val);
+        }
+    }
     /**
      *TODO 最终版-写入任务
      */

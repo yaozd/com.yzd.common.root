@@ -795,6 +795,22 @@ public class ShardedRedisMqUtil {
             }
         });
     }
+
+    /**
+     * 查询list集合的大小
+     * @param redisUrl
+     * @param key
+     * @return
+     */
+    public Long llenExt(String redisUrl, String key){
+        return execute(redisUrl, key, new ShardedJedisPoolExecutor<Long>() {
+            @Override
+            public Long execute(ShardedJedis jedis) {
+                Long value = jedis.llen(key);
+                return value;
+            }
+        });
+    }
     public List<String> srandMemberExt(String redisUrl, String key,int count){
         return execute(redisUrl, key, new ShardedJedisPoolExecutor<List<String>>() {
             @Override

@@ -32,7 +32,15 @@ public class EventListener  implements ApplicationListener {
                 public void run() {
                     while (true){
                         boolean isNoRunningTask= TokenBucketMap.getInstance().isNoRunningTask();
-                        if(isNoRunningTask)break;
+                        if(isNoRunningTask){
+                            //当所有任务都执行完成了。等待2秒，删除任务互斥的KEY
+                            try {
+                                TimeUnit.SECONDS.sleep(2);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                            break;
+                        }
                         try {
                             TimeUnit.SECONDS.sleep(2);
                         } catch (InterruptedException e) {
