@@ -1049,4 +1049,66 @@ public class ShardedRedisUtil {
             }
         }
     }
+    private final String TokenBucketPrefix="TB:";
+
+    /**
+     * 从令牌桶中获取令牌
+     * @param key
+     * @param limit 限流大小
+     * @param expireSec 设置过期时间-时间窗口
+     * @return
+     */
+    public boolean acquire4TokenBucket(final String key,String limit,String expireSec) {
+        return execute(key, new ShardedRedisExecutor<Boolean>() {
+            @Override
+            public Boolean execute(ShardedJedis jedis) {
+                String newKey=TokenBucketPrefix+key;
+                Jedis j= jedis.getShard(newKey);
+                String luaScript="local key = KEYS[1] --限流KEY（一秒一个）\n" +
+                        "local limit = tonumber(ARGV[1]) --限流大小\n" +
+                        "local expireSec = tonumber(ARGV[2]) --并设置2秒过期\n" +
+                        "local current = tonumber(redis.call('get', key) or \"0\")\n" +
+                        "if current + 1 > limit then --如果超出限流大小\n" +
+                        "    return 0\n" +
+                        "else --请求数+1，并设置2秒过期\n" +
+                        "    redis.call(\"INCRBY\", key,\"1\")\n" +
+                        "    redis.call(\"expire\", key,expireSec)\n" +
+                        "    return 1\n" +
+                        "end";
+                List keyList=new ArrayList<String>(1);
+                keyList.add(newKey);
+                List paramList=new ArrayList<String>();
+                paramList.add(limit);
+                paramList.add(expireSec);
+                return (Long)j.eval(luaScript,keyList, paramList)==1;
+            }
+        });
+    }
+
+    /**
+     * 从令牌桶中释放令牌
+     * @param key
+     * @return
+     */
+    public boolean release4TokenBucket(final String key) {
+        return execute(key, new ShardedRedisExecutor<Boolean>() {
+            @Override
+            public Boolean execute(ShardedJedis jedis) {
+                String newKey=TokenBucketPrefix+key;
+                Jedis j= jedis.getShard(newKey);
+                String luaScript="local key = KEYS[1] --限流KEY（一秒一个）\n" +
+                        "local current = tonumber(redis.call('get', key) or \"0\")\n" +
+                        "if current<2 then --如果当前值小于2的话，则删除当前KEY,重新计数。\n" +
+                        "    redis.call(\"DEL\", key)\n" +
+                        "    return 1\n" +
+                        "else --请求数-1\n" +
+                        "    redis.call(\"DECRBY\", key,\"1\")\n" +
+                        "    return 1\n" +
+                        "end";
+                List keyList=new ArrayList<String>(1);
+                keyList.add(newKey);
+                return (Long)j.eval(luaScript,keyList, new ArrayList<String>())==1;
+            }
+        });
+    }
 }
