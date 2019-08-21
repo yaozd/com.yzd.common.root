@@ -1049,6 +1049,7 @@ public class ShardedRedisUtil {
             }
         }
     }
+    //================================================================================
     private final String TokenBucketPrefix="TB:";
 
     /**
@@ -1108,6 +1109,50 @@ public class ShardedRedisUtil {
                 List keyList=new ArrayList<String>(1);
                 keyList.add(newKey);
                 return (Long)j.eval(luaScript,keyList, new ArrayList<String>())==1;
+            }
+        });
+    }
+    //================================================================================
+    private  final String SUCCESS = "OK";
+    private final String DistributedLockPrefix="DL:";
+
+    /**
+     * 获得分布式锁
+     * @param key 锁
+     * @param requestId 请求标识 PS:保证锁不会被误删除
+     * @param expireSec 超期时间
+     * @return
+     */
+    public boolean acquire4DistributedLock(final String key, final String requestId, int expireSec) {
+        return execute(key, new ShardedRedisExecutor<Boolean>() {
+            @Override
+            public Boolean execute(ShardedJedis jedis) {
+                String newKey=DistributedLockPrefix+key;
+                Jedis j= jedis.getShard(newKey);
+                return SUCCESS.equals(j.setex(newKey, expireSec, requestId));
+            }
+        });
+    }
+
+    /**
+     * 释放分布式锁
+     * @param key
+     * @param requestId 请求标识 PS:保证锁不会被误删除
+     * @return
+     */
+    public boolean release4DistributedLock(final String key, final String requestId) {
+        return execute(key, new ShardedRedisExecutor<Boolean>() {
+            @Override
+            public Boolean execute(ShardedJedis jedis) {
+                String newKey=DistributedLockPrefix+key;
+                Jedis j= jedis.getShard(newKey);
+                String luaScript=
+                        "if redis.call('get', KEYS[1]) == ARGV[1] then \n" +
+                        "   return redis.call('del', KEYS[1]) \n" +
+                        "else \n" +
+                        "   return 0 \n" +
+                        "end";
+                return (Long)j.eval(luaScript,Collections.singletonList(newKey), Collections.singletonList(requestId))==1;
             }
         });
     }
